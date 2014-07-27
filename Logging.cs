@@ -1,0 +1,28 @@
+﻿using AutomationX;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace StaKoTecHomeGear
+{
+    static class Logging
+    {
+        private static AX _aX = null;
+        private static AXInstance _mainInstance = null;
+
+        public static void Init(AX ax, AXInstance mainInstance)
+        {
+            _aX = ax;
+            _mainInstance = mainInstance;
+        }
+
+        public static void WriteLog(String message, String stackTrace = "")
+        {
+            _aX.WriteJournal(0, _mainInstance.Name, message, "ON", "HomeGear");
+            if (stackTrace.Length > 0) _aX.WriteJournal(0, _mainInstance.Name, stackTrace, "ON", "HomeGear");
+            _mainInstance.Status = message;
+        }
+    }
+}
