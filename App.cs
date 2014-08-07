@@ -24,8 +24,10 @@ namespace StaKoTecHomeGear
         //Globale Variablen
         bool _disposing = false;
         bool _initCompleted = false;
-        AX _aX = null; 
+        List<String> _classNames = null;
+        AX _aX = null;
         AXInstance _mainInstance = null;
+
         VariableConverter _varConverter = null;
 
         AXVariable _deviceID = null;
@@ -100,11 +102,13 @@ namespace StaKoTecHomeGear
 
                 _mainInstance.Get("RPC_InitComplete").Set(false);
                 _mainInstance.Get("StaKo_TCPIP_Running").Set(true);
-  
+
 
                 Logging.WriteLog("HomeGear started");
 
                 HomeGearConnect();
+
+                
 
                 UInt32 j = 0;
                 while (!_disposing)
@@ -521,6 +525,35 @@ namespace StaKoTecHomeGear
                 //////////////////////////////
                 // Alle HomeGear Instanzen auslesen
                 AXVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
+
+                List<String> classNames = _aX.GetClassNames();
+                List<String> homeGearClassNames = new List<String>();
+                foreach (String name in classNames)
+                {
+                    String[] tempName = name.Split('/');
+                    if (tempName.Length < 3) continue;
+                    String system = tempName[tempName.Length - 3];
+                    String aktName = "";
+                    if (system == "HomeGear")  //Klassen müssen im Verzeichnis HomeGear sein
+                    {
+                        aktName = tempName[tempName.Length - 1].Substring(0, tempName[tempName.Length - 1].Length - 7);
+                        if (aktName == "HomeGear")  //Die HomeGear-Verwaltungs heisst HomeGear - sie sol nicht in die Klassen-übersicht
+                            continue;
+                        homeGearClassNames.Add(aktName);
+                    }
+                }
+                homeGearClassNames.Sort();
+                UInt16 i = 0;
+                foreach (String name in homeGearClassNames)
+                {
+                    if (i > homeGearKlassen.Length)
+                        break;
+                    homeGearKlassen.Set(i, name);
+                    i++;
+                }
+                for (; i < homeGearKlassen.Length; i++)
+                    homeGearKlassen.Set(i, "");
+                
                 List<String> klassen = new List<string>();
 
                 for (x = 0; x < homeGearKlassen.Length; x++)
