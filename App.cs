@@ -101,9 +101,7 @@ namespace StaKoTecHomeGear
                     Dispose();
 
                 _mainInstance.Get("RPC_InitComplete").Set(false);
-                _mainInstance.Get("StaKo_TCPIP_Running").Set(true);
-
-
+          
                 Logging.WriteLog("HomeGear started");
 
                 HomeGearConnect();
@@ -539,7 +537,9 @@ namespace StaKoTecHomeGear
                         aktName = tempName[tempName.Length - 1].Substring(0, tempName[tempName.Length - 1].Length - 7);
                         if (aktName == "HomeGear")  //Die HomeGear-Verwaltungs heisst HomeGear - sie sol nicht in die Klassen-übersicht
                             continue;
-                        homeGearClassNames.Add(aktName);
+
+                        if (!homeGearClassNames.Contains(aktName))
+                            homeGearClassNames.Add(aktName);
                     }
                 }
                 homeGearClassNames.Sort();
@@ -581,8 +581,9 @@ namespace StaKoTecHomeGear
                     foreach(String name2 in instanceNames)
                     {
                         AXInstance instanz = new AXInstance(_aX, name2, "Status", "err");
-                        if (instanz.Get("ID").GetLongInteger() >= 0)  //Wenn eine Instanz frisch eingrfügt wurde und keine ID vergeben wurde, ist die ID -1
+                        if (instanz.Get("ID").GetLongInteger() >= 0)  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1
                         {
+                            Logging.WriteLog("Adding Instance " + instanz.Name + " (ID: " + instanz.Get("ID").GetLongInteger().ToString() + ")");
                             tempinstanzen.Add(instanz.Get("ID").GetLongInteger(), instanz);
                             classnames.Add(instanz.Get("ID").GetLongInteger(), GetClassname(instanz.Name));
                         }
@@ -602,13 +603,16 @@ namespace StaKoTecHomeGear
                             _instanzen[devicePair.Key] = tempinstanzen[devicePair.Key];
                             _deviceTypeString.Set(x, devicePair.Value.TypeString);
                             _deviceInstance.Set(x, aktInstanz.Name);
-                            _deviceRemark.Set(x, aktInstanz.Remark);
+                            if (aktInstanz.Remark.Trim() == "")
+                                _deviceRemark.Set(x, "HomeGear-Name: " + devicePair.Value.Name);
+                            else
+                                _deviceRemark.Set(x, aktInstanz.Remark);
                             _deviceState.Set(x, "OK");
                             _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
 
                             aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
                             aktInstanz.VariableEvents = true;
-                            aktInstanz.PollingInterval = 1000;
+                            aktInstanz.PollingInterval = 100;
                             aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged;
 
                             //Aktuelle Config- und Statuswerte Werte auslesen
@@ -737,8 +741,8 @@ namespace StaKoTecHomeGear
 
                                 if (notWritableVars.Contains(name))
                                 {
-                                    sender.Instance.Status = "VariableName '" + name + "' is in NotWritableVars";
-                                    Logging.WriteLog("VariableName '" + name + "' is in NotWritableVars");
+                                    //sender.Instance.Status = "VariableName '" + name + "' is in NotWritableVars";
+                                    //Logging.WriteLog("VariableName '" + name + "' is in NotWritableVars");
                                     return;
                                 }
                             }
@@ -894,6 +898,7 @@ namespace StaKoTecHomeGear
             {
                 _mainInstance.Status = "RPC: Reload feddich";
                 _mainInstance.Get("RPC_InitComplete").Set(true);
+                Logging.WriteLog("RPC Init Complete");
             }
             catch (Exception ex)
             {
@@ -1106,7 +1111,7 @@ namespace StaKoTecHomeGear
             try
             {
                 _mainInstance.Error = message;
-                _mainInstance.Status = message;
+                Logging.WriteLog(message);
             }
             catch (Exception ex)
             {
@@ -1119,8 +1124,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                _mainInstance.Status = "RPC-Client Verbindung unterbrochen";
-                Console.WriteLine("RPC-Client Verbindung unterbrochen");
+                Logging.WriteLog("RPC-Client Verbindung unterbrochen");
             }
             catch (Exception ex)
             {
@@ -1133,8 +1137,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                _mainInstance.Status = "RPC-Client verbunden";
-                Console.WriteLine("RPC-Client verbunden");
+                Logging.WriteLog("RPC-Client verbunden");
                 _mainInstance.Get("err").Set(false);
             }
             catch (Exception ex)
@@ -1148,8 +1151,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                _mainInstance.Status = "Verbindung von Homegear zu aX unterbrochen";
-                Console.WriteLine("Verbindung von Homegear zu aX unterbrochen");
+                Logging.WriteLog("Verbindung von Homegear zu aX unterbrochen");
             }
             catch (Exception ex)
             {
@@ -1162,8 +1164,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                _mainInstance.Status = "Eingehende Verbindung von Homegear hergestellt";
-                Console.WriteLine("Eingehende Verbindung von Homegear hergestellt");
+                Logging.WriteLog("Eingehende Verbindung von Homegear hergestellt");
                 _mainInstance.Get("err").Set(false);
             }
             catch (Exception ex)

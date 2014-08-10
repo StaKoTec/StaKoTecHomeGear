@@ -20,7 +20,7 @@ namespace StaKoTecHomeGear
 
         public static void WriteLog(String message, String stackTrace = "")
         {
-            String logPath = "D:\\StaKoTecHomeGear.txt";
+            String logPath = "d:\\StaKoTecHomeGear.txt";
             using (System.IO.StreamWriter file = new System.IO.StreamWriter(logPath, true))
             {
                 file.WriteLine(DateTime.Now.ToString() + ": " + message);
