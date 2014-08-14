@@ -155,12 +155,24 @@ namespace StaKoTecHomeGear
 
                             _mainInstance.Get("ServiceMessageVorhanden").Set(serviceMessageVorhanden);
                         }
-                        j++;
-                        }
-                        catch (Exception ex)
+
+                        //Alle 60 Sekunden checken wie lange es her ist, dass die letzten Pakete Empfangen / gesendet wurden
+                        Int32 currentTime = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+                        if (_homegear != null && _initCompleted && j % 60 == 0)
                         {
-                            Logging.WriteLog(ex.Message, ex.StackTrace);
+                            foreach(KeyValuePair<String, Interface> aktInterface in _rpc.ListInterfaces())
+                            {
+                                Console.WriteLine("Interface " + aktInterface.Value.ID + ": LastPacketReceived: " + (currentTime - aktInterface.Value.LastPacketReceived).ToString() + "s ago");
+                                Console.WriteLine("Interface " + aktInterface.Value.ID + ": LastPacketSent: " + (currentTime - aktInterface.Value.LastPacketSent).ToString() + "s ago");
+                            }
                         }
+
+                        j++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.WriteLog(ex.Message, ex.StackTrace);
+                    }
                     Thread.Sleep(1000);
                 }
             }
@@ -232,7 +244,14 @@ namespace StaKoTecHomeGear
                                 else if (aktVar.Type == VariableType.tEnum)
                                 {
                                     defaultVar = aktVar.DefaultInteger.ToString();
-                                    typ = "ENUM (DINT)";
+                                    typ = "ENUM (DINT) {";
+                                    for (int i = 0; i < aktVar.ValueList.Length; i++)
+                                    {
+                                        if (aktVar.ValueList[i] == "")
+                                            continue;
+                                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                                    }
+                                    typ += "}";
                                 }
                                 else
                                 {
@@ -302,7 +321,14 @@ namespace StaKoTecHomeGear
                                 else if (aktVar.Type == VariableType.tEnum)
                                 {
                                     defaultVar = aktVar.DefaultInteger.ToString();
-                                    typ = "ENUM (DINT)";
+                                    typ = "ENUM (DINT) {";
+                                    for (int i = 0; i < aktVar.ValueList.Length; i++)
+                                    {
+                                        if (aktVar.ValueList[i] == "")
+                                            continue;
+                                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                                    }
+                                    typ += "}";
                                 }
                                 else
                                 {
