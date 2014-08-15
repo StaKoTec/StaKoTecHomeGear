@@ -221,52 +221,7 @@ namespace StaKoTecHomeGear
                                 String typ = "";
                                 String defaultVar = "";
                                 String rwVar = "";
-
-                                if (aktVar.Type == VariableType.tInteger)
-                                {
-                                    minVar = aktVar.MinInteger.ToString();
-                                    maxVar = aktVar.MaxInteger.ToString();
-                                    defaultVar = aktVar.DefaultInteger.ToString();
-                                    typ = "DINT";
-                                }
-                                else if (aktVar.Type == VariableType.tDouble)
-                                {
-                                    minVar = aktVar.MinDouble.ToString();
-                                    maxVar = aktVar.MaxDouble.ToString();
-                                    defaultVar = aktVar.DefaultDouble.ToString();
-                                    typ = "LREAL";
-                                }
-                                else if (aktVar.Type == VariableType.tBoolean)
-                                {
-                                    defaultVar = aktVar.DefaultBoolean.ToString();
-                                    typ = "BOOL";
-                                }
-                                else if (aktVar.Type == VariableType.tEnum)
-                                {
-                                    defaultVar = aktVar.DefaultInteger.ToString();
-                                    typ = "ENUM (DINT) {";
-                                    for (int i = 0; i < aktVar.ValueList.Length; i++)
-                                    {
-                                        if (aktVar.ValueList[i] == "")
-                                            continue;
-                                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
-                                    }
-                                    typ += "}";
-                                }
-                                else
-                                {
-                                    defaultVar = aktVar.DefaultString;
-                                    typ = "STRING";
-                                }
-                                if (aktVar.Readable)
-                                    rwVar = "R";
-                                else
-                                    rwVar = "-";
-
-                                if (aktVar.Writeable)
-                                    rwVar += "/W";
-                                else
-                                    rwVar += "/-";
+                                _varConverter.ParseDeviceConfigVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
 
                                 deviceVars_Name.Set(x, aktVar.Name + "_C" + aktChannel.Key.ToString("D2"));
                                 deviceVars_Type.Set(x, typ);
@@ -298,52 +253,7 @@ namespace StaKoTecHomeGear
                                 String typ = "";
                                 String defaultVar = "";
                                 String rwVar = "";
-
-                                if (aktVar.Type == VariableType.tInteger)
-                                {
-                                    minVar = aktVar.MinInteger.ToString();
-                                    maxVar = aktVar.MaxInteger.ToString();
-                                    defaultVar = aktVar.DefaultInteger.ToString();
-                                    typ = "DINT";
-                                }
-                                else if (aktVar.Type == VariableType.tDouble)
-                                {
-                                    minVar = aktVar.MinDouble.ToString();
-                                    maxVar = aktVar.MaxDouble.ToString();
-                                    defaultVar = aktVar.DefaultDouble.ToString();
-                                    typ = "LREAL";
-                                }
-                                else if (aktVar.Type == VariableType.tBoolean)
-                                {
-                                    defaultVar = aktVar.DefaultBoolean.ToString();
-                                    typ = "BOOL";
-                                }
-                                else if (aktVar.Type == VariableType.tEnum)
-                                {
-                                    defaultVar = aktVar.DefaultInteger.ToString();
-                                    typ = "ENUM (DINT) {";
-                                    for (int i = 0; i < aktVar.ValueList.Length; i++)
-                                    {
-                                        if (aktVar.ValueList[i] == "")
-                                            continue;
-                                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
-                                    }
-                                    typ += "}";
-                                }
-                                else
-                                {
-                                    defaultVar = aktVar.DefaultString;
-                                    typ = "STRING";
-                                }
-                                if (aktVar.Readable)
-                                    rwVar = "R";
-                                else
-                                    rwVar = "-";
-
-                                if (aktVar.Writeable)
-                                    rwVar += "/W";
-                                else
-                                    rwVar += "/-";
+                                _varConverter.ParseDeviceVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
 
                                 deviceVars_Name.Set(x, aktVar.Name + "_V" + aktChannel.Key.ToString("D2"));
                                 deviceVars_Type.Set(x, typ);
@@ -367,17 +277,17 @@ namespace StaKoTecHomeGear
                         deviceVars_RW.Set(x, "");
                     }
                 }
+                _homegearDevicesMutex.ReleaseMutex();
             }
             catch (Exception ex)
             {
-                
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Instance.Error = ex.Message;
                 sender.Instance.Status = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
             finally
             {
-                _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
             }
         }
@@ -392,18 +302,16 @@ namespace StaKoTecHomeGear
 
                 _rpc.DeleteDevice(deviceID, RPCDeleteDeviceFlags.Force);
 
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
                 sender.Instance.Status = "Removing Device ID " + deviceID.ToString() + " complete";
             }
             catch (Exception ex)
             {
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Instance.Error = ex.Message;
                 sender.Instance.Status = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
-            }
-            finally
-            {
-                _homegearDevicesMutex.ReleaseMutex();
             }
         }
 
@@ -416,19 +324,17 @@ namespace StaKoTecHomeGear
                 _homegearDevicesMutex.WaitOne();
 
                 _rpc.DeleteDevice(deviceID, RPCDeleteDeviceFlags.Reset | RPCDeleteDeviceFlags.Defer);
-                
+
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
                 sender.Instance.Status = "Resetting Device ID " + deviceID.ToString() + " complete";
             }
             catch (Exception ex)
             {
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Instance.Error = ex.Message;
                 sender.Instance.Status = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
-            }
-            finally
-            {
-                _homegearDevicesMutex.ReleaseMutex();
             }
         }
 
@@ -442,18 +348,16 @@ namespace StaKoTecHomeGear
 
                 _rpc.DeleteDevice(deviceID, RPCDeleteDeviceFlags.Defer);
 
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
                 sender.Instance.Status = "Unpairing Device ID " + deviceID.ToString() + " complete";
             }
             catch (Exception ex)
             {
+                _homegearDevicesMutex.ReleaseMutex();
                 sender.Instance.Error = ex.Message;
                 sender.Instance.Status = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
-            }
-            finally
-            {
-                _homegearDevicesMutex.ReleaseMutex();
             }
         }
 
@@ -517,6 +421,45 @@ namespace StaKoTecHomeGear
         }
 
 
+        List<String> getHomeGearClasses()
+        {
+            AXVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
+            List<String> classNames = _aX.GetClassNames();
+            List<String> homeGearClassNames = new List<String>();
+            foreach (String name in classNames)
+            {
+                String[] tempName = name.Split('/');
+                if (tempName.Length < 3) continue;
+                String system = tempName[tempName.Length - 3];
+                String aktName = "";
+                if (system == "HomeGear")  //Klassen müssen im Verzeichnis HomeGear sein
+                {
+                    aktName = tempName[tempName.Length - 1].Substring(0, tempName[tempName.Length - 1].Length - 7);
+                    if (aktName == "HomeGear")  //Die HomeGear-Verwaltungs heisst HomeGear - sie sol nicht in die Klassen-übersicht
+                        continue;
+
+                    if (!homeGearClassNames.Contains(aktName))
+                        homeGearClassNames.Add(aktName);
+                }
+            }
+            homeGearClassNames.Sort();
+
+            UInt16 i = 0;
+            UInt16 x = 0;
+            foreach (String name in homeGearClassNames)
+            {
+                if (i > homeGearKlassen.Length)
+                    break;
+                homeGearKlassen.Set(i, name);
+                i++;
+            }
+
+            for (; i < homeGearKlassen.Length; i++)
+                homeGearKlassen.Set(i, "");
+
+            return homeGearClassNames;
+        }
+
         void init_ValueChanged(AXVariable sender)
         {
             try
@@ -549,48 +492,9 @@ namespace StaKoTecHomeGear
                 _mainInstance.Get("HomeGearVersion").Set(_homegear.Version);
 
 
-                //////////////////////////////
                 // Alle HomeGear Instanzen auslesen
-                AXVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
-
-                List<String> classNames = _aX.GetClassNames();
-                List<String> homeGearClassNames = new List<String>();
-                foreach (String name in classNames)
-                {
-                    String[] tempName = name.Split('/');
-                    if (tempName.Length < 3) continue;
-                    String system = tempName[tempName.Length - 3];
-                    String aktName = "";
-                    if (system == "HomeGear")  //Klassen müssen im Verzeichnis HomeGear sein
-                    {
-                        aktName = tempName[tempName.Length - 1].Substring(0, tempName[tempName.Length - 1].Length - 7);
-                        if (aktName == "HomeGear")  //Die HomeGear-Verwaltungs heisst HomeGear - sie sol nicht in die Klassen-übersicht
-                            continue;
-
-                        if (!homeGearClassNames.Contains(aktName))
-                            homeGearClassNames.Add(aktName);
-                    }
-                }
-                homeGearClassNames.Sort();
-                UInt16 i = 0;
-                foreach (String name in homeGearClassNames)
-                {
-                    if (i > homeGearKlassen.Length)
-                        break;
-                    homeGearKlassen.Set(i, name);
-                    i++;
-                }
-
-                for (; i < homeGearKlassen.Length; i++)
-                    homeGearKlassen.Set(i, "");
-                List<String> klassen = new List<string>();
-
-                for (x = 0; x < homeGearKlassen.Length; x++)
-                {
-                    String temp = homeGearKlassen.GetString(x).Trim();
-                    if (temp.Length > 0) klassen.Add(temp);
-                    else break;
-                }
+                List<String> homegearClasses = getHomeGearClasses();
+                
                 //Alle instanz-handles wieder aufheben 
                 /*if (_instanzen != null)
                 {
@@ -602,11 +506,10 @@ namespace StaKoTecHomeGear
                 }*/
                 //Nicht disposen -> HomegearLib  merkt, wenn sich spsid gechanged hat.
                 // lieber gucken, ob neue instanzen hinzugekommen sind oder alte gelöscht wurden und in _instanzen hinzufügen oder löschen#!!!!!!!!
-
-                _instanzen = new Dictionary<Int32, AXInstance>();
+                _instanzen = new Dictionary<int, AXInstance>();
                 Dictionary<Int32, AXInstance> tempinstanzen = new Dictionary<Int32, AXInstance>();
                 Dictionary<Int32, String> classnames = new Dictionary<Int32, String>();
-                foreach (String name in klassen)
+                foreach (String name in homegearClasses)
                 {
                     List<String> instanceNames = _aX.GetInstanceNames(name);
                     foreach (String name2 in instanceNames)
@@ -646,6 +549,7 @@ namespace StaKoTecHomeGear
                             if (aktInstanz.VariableExists("Name"))
                                 aktInstanz.Get("Name").Set(devicePair.Value.Name);
 
+                            
                             aktInstanz.SetVariableEvents(true);
                             aktInstanz.PollingInterval = 100;
                             aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged;
@@ -744,7 +648,75 @@ namespace StaKoTecHomeGear
 
         void Subinstance_VariableValueChanged(AXVariable sender)
         {
-            Logging.WriteLog("Variable " + sender.Instance.Name + "." + sender.Name + " has changed");
+            Logging.WriteLog("Variable " + sender.Path + " has changed");
+            string[] teile = sender.Path.Split('.');
+            String parentInstanceName = teile.First();
+            AXInstance parentInstance = new AXInstance(_aX, parentInstanceName, "Status", "err");
+            _homegearDevicesMutex.WaitOne();
+            try
+            {
+                if (_homegear.Devices.ContainsKey(parentInstance.Get("ID").GetLongInteger()))
+                {
+                    Device aktDevice = _homegear.Devices[parentInstance.Get("ID").GetLongInteger()];
+                    String name;
+                    String type;
+                    Int32 channelIndex;
+                    name = sender.Name;
+                    type = sender.Instance.Name.Substring(0, 1);
+                    Int32.TryParse(sender.Instance.Name.Substring((sender.Instance.Name.Length - 2), 2), out channelIndex);
+
+
+                    /////////////////////////////////////////////////////
+                    // Variablen, die nicht beschrieben werden dürfen, aber in der XML-Datei als writeable gekennzeichnet sind.
+                    // Beschreibt man so eine Variable, passieren komische Dinge in HomeGear
+                    List<String> notWritableVars = new List<String>();
+                    if (parentInstance.VariableExists("NotWritableVars"))
+                    {
+                        AXVariable notWritableVarsAX = parentInstance.Get("NotWritableVars");
+                        for (UInt16 x = 0; x < notWritableVarsAX.Length; x++)
+                            notWritableVars.Add(notWritableVarsAX.GetString(x));
+
+                        if (notWritableVars.Contains(name))
+                        {
+                            //sender.Instance.Status = "VariableName '" + name + "' is in NotWritableVars";
+                            //Logging.WriteLog("VariableName '" + name + "' is in NotWritableVars");
+                            _homegearDevicesMutex.ReleaseMutex();
+                            return;
+                        }
+                    }
+
+                    if (aktDevice.Channels.ContainsKey(channelIndex))
+                    {
+                        Channel channel = aktDevice.Channels[channelIndex];
+                        if (type == "V")
+                        {
+                            if (channel.Variables.ContainsKey(name))
+                            {
+                                String status = "Set Homegear Variable " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + "";
+                                _mainInstance.Status = status;
+                                Console.WriteLine(status);
+                                _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
+                            }
+                        }
+                        else if (type == "C")
+                        {
+                            if (channel.Config.ContainsKey(name))
+                            {
+                                String status = "Set Homegear Config " + parentInstance.Name + "." + name + ", Channel: " + channelIndex.ToString() + "";
+                                _mainInstance.Status = status;
+                                Console.WriteLine(status);
+                                _varConverter.SetHomeGearVariable(channel.Config[name], sender);
+                            }
+                        }
+                    }
+                }
+                _homegearDevicesMutex.ReleaseMutex();
+            }
+            catch (Exception ex)
+            {
+                _homegearDevicesMutex.ReleaseMutex();
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
         }
 
         void aktInstanz_VariableValueChanged(AXVariable sender)
@@ -788,55 +760,6 @@ namespace StaKoTecHomeGear
                     else if (sender.Name == "Name")
                     {
                         aktDevice.Name = sender.Instance.Get("Name").GetString();
-                    }
-                    else
-                    {
-                        if (_varConverter.ParseAXVariable(sender, out name, out type, out channelIndex))
-                        {
-                            /////////////////////////////////////////////////////
-                            // Variablen, die nicht beschrieben werden dürfen, aber in der XML-Datei als writeable gekennzeichnet sind.
-                            // Beschreibt man so eine Variable, passieren komische Dinge in HomeGear
-                            List<String> notWritableVars = new List<String>();
-                            if (sender.Instance.VariableExists("NotWritableVars"))
-                            {
-                                AXVariable notWritableVarsAX = sender.Instance.Get("NotWritableVars");
-                                for (UInt16 x = 0; x < notWritableVarsAX.Length; x++)
-                                    notWritableVars.Add(notWritableVarsAX.GetString(x));
-
-                                if (notWritableVars.Contains(name))
-                                {
-                                    //sender.Instance.Status = "VariableName '" + name + "' is in NotWritableVars";
-                                    //Logging.WriteLog("VariableName '" + name + "' is in NotWritableVars");
-                                    _homegearDevicesMutex.ReleaseMutex();
-                                    return;
-                                }
-                            }
-
-                            if (aktDevice.Channels.ContainsKey(channelIndex))
-                            {
-                                Channel channel = aktDevice.Channels[channelIndex];
-                                if (type == "V")
-                                {
-                                    if (channel.Variables.ContainsKey(name))
-                                    {
-                                        String status = "Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + "";
-                                        _mainInstance.Status = status;
-                                        Console.WriteLine(status);
-                                        _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
-                                    }
-                                }
-                                else if (type == "C")
-                                {
-                                    if (channel.Config.ContainsKey(name))
-                                    {
-                                        String status = "Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + "";
-                                        _mainInstance.Status = status;
-                                        Console.WriteLine(status);
-                                        _varConverter.SetHomeGearVariable(channel.Config[name], sender);
-                                    }
-                                }
-                            }
-                        }
                     }
                 }
                 _homegearDevicesMutex.ReleaseMutex();

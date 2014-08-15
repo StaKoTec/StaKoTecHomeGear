@@ -19,6 +19,117 @@ namespace StaKoTecHomeGear
         }
 
 
+        public void ParseDeviceConfigVars(ConfigParameter aktVar, out String minVar, out String maxVar, out String typ, out String defaultVar, out String rwVar)
+        {
+            minVar = "";
+            maxVar = "";
+            typ = "";
+            defaultVar = "";
+            rwVar = "";
+
+            if (aktVar.Type == VariableType.tInteger)
+            {
+                minVar = aktVar.MinInteger.ToString();
+                maxVar = aktVar.MaxInteger.ToString();
+                defaultVar = aktVar.DefaultInteger.ToString();
+                typ = "DINT";
+            }
+            else if (aktVar.Type == VariableType.tDouble)
+            {
+                minVar = aktVar.MinDouble.ToString();
+                maxVar = aktVar.MaxDouble.ToString();
+                defaultVar = aktVar.DefaultDouble.ToString();
+                typ = "LREAL";
+            }
+            else if (aktVar.Type == VariableType.tBoolean)
+            {
+                defaultVar = aktVar.DefaultBoolean.ToString();
+                typ = "BOOL";
+            }
+            else if (aktVar.Type == VariableType.tEnum)
+            {
+                defaultVar = aktVar.DefaultInteger.ToString();
+                typ = "ENUM (DINT) {";
+                for (int i = 0; i < aktVar.ValueList.Length; i++)
+                {
+                    if (aktVar.ValueList[i] == "")
+                        continue;
+                    typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                }
+                typ += "}";
+            }
+            else
+            {
+                defaultVar = aktVar.DefaultString;
+                typ = "STRING";
+            }
+            if (aktVar.Readable)
+                rwVar = "R";
+            else
+                rwVar = "-";
+
+            if (aktVar.Writeable)
+                rwVar += "/W";
+            else
+                rwVar += "/-";
+        }
+
+        public void ParseDeviceVars(Variable aktVar, out String minVar, out String maxVar, out String typ, out String defaultVar, out String rwVar)
+        {
+            minVar = "";
+            maxVar = "";
+            typ = "";
+            defaultVar = "";
+            rwVar = "";
+
+            if (aktVar.Type == VariableType.tInteger)
+            {
+                minVar = aktVar.MinInteger.ToString();
+                maxVar = aktVar.MaxInteger.ToString();
+                defaultVar = aktVar.DefaultInteger.ToString();
+                typ = "DINT";
+            }
+            else if (aktVar.Type == VariableType.tDouble)
+            {
+                minVar = aktVar.MinDouble.ToString();
+                maxVar = aktVar.MaxDouble.ToString();
+                defaultVar = aktVar.DefaultDouble.ToString();
+                typ = "LREAL";
+            }
+            else if (aktVar.Type == VariableType.tBoolean)
+            {
+                defaultVar = aktVar.DefaultBoolean.ToString();
+                typ = "BOOL";
+            }
+            else if (aktVar.Type == VariableType.tEnum)
+            {
+                defaultVar = aktVar.DefaultInteger.ToString();
+                typ = "ENUM (DINT) {";
+                for (int i = 0; i < aktVar.ValueList.Length; i++)
+                {
+                    if (aktVar.ValueList[i] == "")
+                        continue;
+                    typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                }
+                typ += "}";
+            }
+            else
+            {
+                defaultVar = aktVar.DefaultString;
+                typ = "STRING";
+            }
+            if (aktVar.Readable)
+                rwVar = "R";
+            else
+                rwVar = "-";
+
+            if (aktVar.Writeable)
+                rwVar += "/W";
+            else
+                rwVar += "/-";
+        }
+
+
         public Boolean ParseAXVariable(AXVariable var, out String name, out String type, out Int32 channel)
         {
             name = "";
