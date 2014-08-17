@@ -506,7 +506,6 @@ namespace StaKoTecHomeGear
                 }*/
                 //Nicht disposen -> HomegearLib  merkt, wenn sich spsid gechanged hat.
                 // lieber gucken, ob neue instanzen hinzugekommen sind oder alte gelöscht wurden und in _instanzen hinzufügen oder löschen#!!!!!!!!
-                _instanzen = new Dictionary<int, AXInstance>();
                 Dictionary<Int32, AXInstance> tempinstanzen = new Dictionary<Int32, AXInstance>();
                 Dictionary<Int32, String> classnames = new Dictionary<Int32, String>();
                 foreach (String name in homegearClasses)
@@ -517,13 +516,29 @@ namespace StaKoTecHomeGear
                         AXInstance instanz = new AXInstance(_aX, name2, "Status", "err");
                         if (instanz.Get("ID").GetLongInteger() >= 0)  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1
                         {
-                            //Logging.WriteLog("Adding Instance " + instanz.Name + " (ID: " + instanz.Get("ID").GetLongInteger().ToString() + ")");
+                            Logging.WriteLog("Adding Instance " + instanz.Name + " (ID: " + instanz.Get("ID").GetLongInteger().ToString() + ")");
                             tempinstanzen.Add(instanz.Get("ID").GetLongInteger(), instanz);
                             classnames.Add(instanz.Get("ID").GetLongInteger(), GetClassname(instanz.Name));
                         }
                     }
                 }
 
+                //Gucken ob noch in _instanzen irgendwelche Instanzen stehen die es in tempinstanzen schon nicht mehr gibt.
+                /*if (_instanzen != null)
+                {
+                    foreach (KeyValuePair<Int32, AXInstance> disposeInstance in _instanzen)
+                    {
+                        Logging.WriteLog("Checke " + disposeInstance.Value.Name);
+                        if (!tempinstanzen.ContainsValue(disposeInstance.Value))
+                        {
+                            Logging.WriteLog("Dispose " + disposeInstance.Value.Name);
+                            disposeInstance.Value.Dispose();
+                        }
+                        else
+                            Logging.WriteLog(disposeInstance.Value.Name + " ist noch vorhanden");
+                    }
+                }*/
+                _instanzen = new Dictionary<Int32, AXInstance>();
                 x = 0;
                 foreach (KeyValuePair<Int32, Device> devicePair in _homegear.Devices)
                 {
@@ -593,6 +608,12 @@ namespace StaKoTecHomeGear
                                         //Console.WriteLine("Setze " + aktInstanz.Name + "." + aktVarName);
                                         AXVariable aktAXVar = aktInstanz.Get(aktVarName);
                                         if (aktAXVar != null) _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                    }
+                                    String subinstance = "C" + aktChannel.Key.ToString("D2");
+                                    if (aktInstanz.SubinstanceExists(subinstance))
+                                    {
+                                        AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                                        if (aktAXVar2 != null) _varConverter.SetAXVariable(aktAXVar2, aktVar);
                                     }
                                 }
                             }
