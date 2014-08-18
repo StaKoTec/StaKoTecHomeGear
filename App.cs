@@ -728,9 +728,7 @@ namespace StaKoTecHomeGear
                         {
                             if (channel.Variables.ContainsKey(name))
                             {
-                                String status = "Set Homegear Variable " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + "";
-                                _mainInstance.Status = status;
-                                Console.WriteLine(status);
+                                Logging.WriteLog("Set Homegear Variable " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                 _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
                             }
                         }
@@ -738,9 +736,7 @@ namespace StaKoTecHomeGear
                         {
                             if (channel.Config.ContainsKey(name))
                             {
-                                String status = "Set Homegear Config " + parentInstance.Name + "." + name + ", Channel: " + channelIndex.ToString() + "";
-                                _mainInstance.Status = status;
-                                Console.WriteLine(status);
+                                Logging.WriteLog("Set Homegear Config " + parentInstance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                 _varConverter.SetHomeGearVariable(channel.Config[name], sender);
                             }
                         }

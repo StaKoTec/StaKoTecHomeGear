@@ -181,6 +181,83 @@ namespace StaKoTecHomeGear
 
         }
 
+        public String AutomationXVarToString(AXVariable Var)
+        {
+            String stringVar = "AUTOMATIONX VAR-TYPE NOT FOUND";
+            try
+            {
+                switch (Var.Type)
+                {
+                    case AXVariableType.axBool:
+                        stringVar = Var.GetBool().ToString();
+                        break;
+                    case AXVariableType.axByte:
+                        stringVar = Var.GetByte().ToString();
+                        break;
+                    case AXVariableType.axInteger:
+                        stringVar = Var.GetInteger().ToString();
+                        break;
+                    case AXVariableType.axLongInteger:
+                        stringVar = Var.GetLongInteger().ToString();
+                        break;
+                    case AXVariableType.axUnsignedInteger:
+                        stringVar = Var.GetUnsignedInteger().ToString();
+                        break;
+                    case AXVariableType.axUnsignedLongInteger:
+                        stringVar = Var.GetUnsignedLongInteger().ToString();
+                        break;
+                    case AXVariableType.axReal:
+                        stringVar = Var.GetReal().ToString();
+                        break;
+                    case AXVariableType.axLongReal:
+                        stringVar = Var.GetLongReal().ToString();
+                        break;
+                    case AXVariableType.axShortInteger:
+                        stringVar = Var.GetShortInteger().ToString();
+                        break;
+                    case AXVariableType.axString:
+                        stringVar = Var.GetString();
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _mainInstance.Error = ex.Message;
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+            return stringVar;
+        }
+
+        public String HomegearVarToString(Variable Var)
+        {
+            String stringVar = "HOMEGEAR VAR-TYPE NOT FOUND";
+            try
+            {
+                switch (Var.Type)
+                {
+                    case VariableType.tBoolean:
+                        stringVar = Var.BooleanValue.ToString();
+                        break;
+                    case VariableType.tDouble:
+                        stringVar = Var.DoubleValue.ToString();
+                        break;
+                    case VariableType.tEnum:
+                    case VariableType.tInteger:
+                        stringVar = Var.IntegerValue.ToString();
+                        break;
+                    case VariableType.tString:
+                        stringVar = Var.StringValue;
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _mainInstance.Error = ex.Message;
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+            return stringVar;
+        }
+
 
         public void SetAXVariable(AXVariable aXVar, Variable homegearVar)
         {
