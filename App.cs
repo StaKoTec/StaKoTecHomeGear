@@ -88,24 +88,27 @@ namespace StaKoTecHomeGear
                 AXVariable getDeviceConfigVars = _mainInstance.Get("GetDeviceConfigVars");
                 getDeviceConfigVars.Set(false);
                 getDeviceConfigVars.ValueChanged += getDeviceVars_ValueChanged;
+                AXVariable axStartID = _mainInstance.Get("StartID");
+                axStartID.ValueChanged += axStartID_ValueChanged;
 
                 AXVariable lifetick = _mainInstance.Get("Lifetick");
                 AXVariable aXcycleCounter = _mainInstance.Get("CycleCounter");
                 Int32 cycleCounter = 0;
                 Int32 i = 0;
 
-                AXVariable startStaKoTCPIPRelease = _mainInstance.Get("StartStaKo_TCPIPRelease");
-                startStaKoTCPIPRelease.ValueChanged += startStaKoTCPIPRelease_ValueChanged;
-                if (!startStaKoTCPIPRelease.GetBool())
+                
+
+                AXVariable start_CAPI_Release = _mainInstance.Get("Start_CAPI_Release");
+                start_CAPI_Release.ValueChanged += start_CAPI_Release_ValueChanged;
+                if (!start_CAPI_Release.GetBool())
                     Dispose();
 
                 _mainInstance.Get("RPC_InitComplete").Set(false);
-          
+                _mainInstance.Get("CAPI_Running").Set(true);
+
                 Logging.WriteLog("HomeGear started");
 
                 HomeGearConnect();
-
-                
 
                 UInt32 j = 0;
                 while (!_disposing)
@@ -115,7 +118,6 @@ namespace StaKoTecHomeGear
                         lifetick.Set(true);
                         aXcycleCounter.Set(cycleCounter);
                         cycleCounter++;
-
 
                         if (!_rpc.IsConnected)
                         {
@@ -177,6 +179,19 @@ namespace StaKoTecHomeGear
                 }
             }
             catch(Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+        }
+
+        void axStartID_ValueChanged(AXVariable sender)
+        {
+            try
+            {
+                Logging.WriteLog("StartID has changed! Exiting!!!");
+                Dispose();
+            }
+            catch (Exception ex)
             {
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
@@ -375,7 +390,7 @@ namespace StaKoTecHomeGear
             }
         }
 
-        void startStaKoTCPIPRelease_ValueChanged(AXVariable sender)
+        void start_CAPI_Release_ValueChanged(AXVariable sender)
         {
             try
             {
@@ -834,6 +849,7 @@ namespace StaKoTecHomeGear
                 _mainInstance.Get("RPC_InitComplete").Set(false);
                 _mainInstance.Get("ServiceMessageVorhanden").Set(false);
                 _mainInstance.Get("PairingMode").Set(false);
+                _mainInstance.Get("CAPI_Running").Set(false);
                 _mainInstance.Status = "StaKoTecHomeGear.exe beendet";
                 Console.WriteLine("Und aus!!");
             }
@@ -1065,11 +1081,21 @@ namespace StaKoTecHomeGear
                 {
                     AXInstance instanz = _instanzen[deviceID];
                     String varName = variable.Name + "_V" + channel.Index.ToString("D2");
-                    AXVariable aXVariable = instanz.Get(varName);
+                    if (instanz.VariableExists(varName))
+                    {
+                        AXVariable aktAXVar = instanz.Get(varName);
+                        if (aktAXVar != null) _varConverter.SetAXVariable(aktAXVar, variable);
+                    }
+                    String subinstance = "V" + channel.Index.ToString("D2");
+                    if (instanz.SubinstanceExists(subinstance))
+                    {
+                        AXVariable aktAXVar2 = instanz.GetSubinstance(subinstance).Get(variable.Name);
+                        if (aktAXVar2 != null) _varConverter.SetAXVariable(aktAXVar2, variable);
+                    }
+
                     AXVariable aXVariable_LastChange = instanz.Get("LastChange");
                     List<String> lastChange = new List<String>();
                     UInt16 x = 0;
-                    if (aXVariable != null) _varConverter.SetAXVariable(aXVariable, variable);
 
                     lastChange.Add(DateTime.Now.Hour.ToString("D2") + ":" + DateTime.Now.Minute.ToString("D2") + ":" + DateTime.Now.Second.ToString("D2") + ": " + varName + " = " + variable.ToString());
                     for (x = 0; x < aXVariable_LastChange.Length; x++)
