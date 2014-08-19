@@ -548,7 +548,7 @@ namespace StaKoTecHomeGear
                         AXInstance instanz = new AXInstance(_aX, name2, "Status", "err");
                         if (instanz.Get("ID").GetLongInteger() >= 0)  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1
                         {
-                            Logging.WriteLog("Adding Instance " + instanz.Name + " (ID: " + instanz.Get("ID").GetLongInteger().ToString() + ")");
+                            //Logging.WriteLog("Adding Instance " + instanz.Name + " (ID: " + instanz.Get("ID").GetLongInteger().ToString() + ")");
                             tempinstanzen.Add(instanz.Get("ID").GetLongInteger(), instanz);
                             classnames.Add(instanz.Get("ID").GetLongInteger(), GetClassname(instanz.Name));
                         }
@@ -599,16 +599,18 @@ namespace StaKoTecHomeGear
                             aktInstanz.Get("Lifetick").Set(true);
 
                             aktInstanz.SetVariableEvents(true);
-                            aktInstanz.PollingInterval = 1000;
+                            aktInstanz.PollingInterval = 20;
                             aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged;
                             _polledVariablesCount += aktInstanz.PolledVariablesCount;
                             //Alle Sub-Instanzen auslesen und ebenfalls VariableChanged-Events drauf los lassen
+                            //Logging.WriteLog("Adding Instance-Event for " + aktInstanz.Path + " (" + aktInstanz.Subinstances.Length + " Subinstances)");
                             foreach (AXInstance aktSubinstance in aktInstanz.Subinstances)
                             {
-                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
-                                aktSubinstance.VariableValueChanged += Subinstance_VariableValueChanged;
                                 aktSubinstance.SetVariableEvents(true);
-                                aktSubinstance.PollingInterval = 1000;
+                                aktSubinstance.PollingInterval = 20;
+                                aktSubinstance.VariableValueChanged += Subinstance_VariableValueChanged;
+                                //Logging.WriteLog("Adding Subinstance-Event for " + aktSubinstance.Path);
+                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
                             }
 
                             //Aktuelle Config- und Statuswerte Werte auslesen
