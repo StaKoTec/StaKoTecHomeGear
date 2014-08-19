@@ -26,52 +26,58 @@ namespace StaKoTecHomeGear
             typ = "";
             defaultVar = "";
             rwVar = "";
-
-            if (aktVar.Type == VariableType.tInteger)
+            try
             {
-                minVar = aktVar.MinInteger.ToString();
-                maxVar = aktVar.MaxInteger.ToString();
-                defaultVar = aktVar.DefaultInteger.ToString();
-                typ = "DINT";
-            }
-            else if (aktVar.Type == VariableType.tDouble)
-            {
-                minVar = aktVar.MinDouble.ToString();
-                maxVar = aktVar.MaxDouble.ToString();
-                defaultVar = aktVar.DefaultDouble.ToString();
-                typ = "LREAL";
-            }
-            else if (aktVar.Type == VariableType.tBoolean)
-            {
-                defaultVar = aktVar.DefaultBoolean.ToString();
-                typ = "BOOL";
-            }
-            else if (aktVar.Type == VariableType.tEnum)
-            {
-                defaultVar = aktVar.DefaultInteger.ToString();
-                typ = "ENUM (DINT) {";
-                for (int i = 0; i < aktVar.ValueList.Length; i++)
+                if (aktVar.Type == VariableType.tInteger)
                 {
-                    if (aktVar.ValueList[i] == "")
-                        continue;
-                    typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                    minVar = aktVar.MinInteger.ToString();
+                    maxVar = aktVar.MaxInteger.ToString();
+                    defaultVar = aktVar.DefaultInteger.ToString();
+                    typ = "DINT";
                 }
-                typ += "}";
-            }
-            else
-            {
-                defaultVar = aktVar.DefaultString;
-                typ = "STRING";
-            }
-            if (aktVar.Readable)
-                rwVar = "R";
-            else
-                rwVar = "-";
+                else if (aktVar.Type == VariableType.tDouble)
+                {
+                    minVar = aktVar.MinDouble.ToString();
+                    maxVar = aktVar.MaxDouble.ToString();
+                    defaultVar = aktVar.DefaultDouble.ToString();
+                    typ = "LREAL";
+                }
+                else if (aktVar.Type == VariableType.tBoolean)
+                {
+                    defaultVar = aktVar.DefaultBoolean.ToString();
+                    typ = "BOOL";
+                }
+                else if (aktVar.Type == VariableType.tEnum)
+                {
+                    defaultVar = aktVar.DefaultInteger.ToString();
+                    typ = "ENUM (DINT) {";
+                    for (int i = 0; i < aktVar.ValueList.Length; i++)
+                    {
+                        if (aktVar.ValueList[i] == "")
+                            continue;
+                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                    }
+                    typ += "}";
+                }
+                else
+                {
+                    defaultVar = aktVar.DefaultString;
+                    typ = "STRING";
+                }
+                if (aktVar.Readable)
+                    rwVar = "R";
+                else
+                    rwVar = "-";
 
-            if (aktVar.Writeable)
-                rwVar += "/W";
-            else
-                rwVar += "/-";
+                if (aktVar.Writeable)
+                    rwVar += "/W";
+                else
+                    rwVar += "/-";
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
         }
 
         public void ParseDeviceVars(Variable aktVar, out String minVar, out String maxVar, out String typ, out String defaultVar, out String rwVar)
@@ -81,52 +87,58 @@ namespace StaKoTecHomeGear
             typ = "";
             defaultVar = "";
             rwVar = "";
-
-            if (aktVar.Type == VariableType.tInteger)
+            try
             {
-                minVar = aktVar.MinInteger.ToString();
-                maxVar = aktVar.MaxInteger.ToString();
-                defaultVar = aktVar.DefaultInteger.ToString();
-                typ = "DINT";
-            }
-            else if (aktVar.Type == VariableType.tDouble)
-            {
-                minVar = aktVar.MinDouble.ToString();
-                maxVar = aktVar.MaxDouble.ToString();
-                defaultVar = aktVar.DefaultDouble.ToString();
-                typ = "LREAL";
-            }
-            else if (aktVar.Type == VariableType.tBoolean)
-            {
-                defaultVar = aktVar.DefaultBoolean.ToString();
-                typ = "BOOL";
-            }
-            else if (aktVar.Type == VariableType.tEnum)
-            {
-                defaultVar = aktVar.DefaultInteger.ToString();
-                typ = "ENUM (DINT) {";
-                for (int i = 0; i < aktVar.ValueList.Length; i++)
+                if (aktVar.Type == VariableType.tInteger)
                 {
-                    if (aktVar.ValueList[i] == "")
-                        continue;
-                    typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                    minVar = aktVar.MinInteger.ToString();
+                    maxVar = aktVar.MaxInteger.ToString();
+                    defaultVar = aktVar.DefaultInteger.ToString();
+                    typ = "DINT";
                 }
-                typ += "}";
-            }
-            else
-            {
-                defaultVar = aktVar.DefaultString;
-                typ = "STRING";
-            }
-            if (aktVar.Readable)
-                rwVar = "R";
-            else
-                rwVar = "-";
+                else if (aktVar.Type == VariableType.tDouble)
+                {
+                    minVar = aktVar.MinDouble.ToString();
+                    maxVar = aktVar.MaxDouble.ToString();
+                    defaultVar = aktVar.DefaultDouble.ToString();
+                    typ = "LREAL";
+                }
+                else if (aktVar.Type == VariableType.tBoolean)
+                {
+                    defaultVar = aktVar.DefaultBoolean.ToString();
+                    typ = "BOOL";
+                }
+                else if (aktVar.Type == VariableType.tEnum)
+                {
+                    defaultVar = aktVar.DefaultInteger.ToString();
+                    typ = "ENUM (DINT) {";
+                    for (int i = 0; i < aktVar.ValueList.Length; i++)
+                    {
+                        if (aktVar.ValueList[i] == "")
+                            continue;
+                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                    }
+                    typ += "}";
+                }
+                else
+                {
+                    defaultVar = aktVar.DefaultString;
+                    typ = "STRING";
+                }
+                if (aktVar.Readable)
+                    rwVar = "R";
+                else
+                    rwVar = "-";
 
-            if (aktVar.Writeable)
-                rwVar += "/W";
-            else
-                rwVar += "/-";
+                if (aktVar.Writeable)
+                    rwVar += "/W";
+                else
+                    rwVar += "/-";
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
         }
 
 
@@ -135,15 +147,20 @@ namespace StaKoTecHomeGear
             name = "";
             channel = -1;
             type = "";
+            try
+            {
+                if ((var == null) || (var.Name.Length < 5))
+                    return false;
 
-            if ((var == null) || (var.Name.Length < 5))
-                return false;
-
-            name = var.Name.Substring(0, (var.Name.Length - 4));
-            type = var.Name.Substring((var.Name.Length - 3), 1);
-            if (!Int32.TryParse(var.Name.Substring((var.Name.Length - 2), 2), out channel))
-                return false;
-
+                name = var.Name.Substring(0, (var.Name.Length - 4));
+                type = var.Name.Substring((var.Name.Length - 3), 1);
+                if (!Int32.TryParse(var.Name.Substring((var.Name.Length - 2), 2), out channel))
+                    return false;
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
             return true;
         }
 

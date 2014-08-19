@@ -26,6 +26,7 @@ namespace StaKoTecHomeGear
         bool _initCompleted = false;
         AX _aX = null;
         AXInstance _mainInstance = null;
+        Int32 _polledVariablesCount = 0;
 
         VariableConverter _varConverter = null;
 
@@ -62,7 +63,7 @@ namespace StaKoTecHomeGear
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
 
                 _mainInstance = new AXInstance(_aX, instanceName, "Status", "err"); //Instanz-Objekt erstellen
-                _mainInstance.PollingInterval = 500;
+                _mainInstance.PollingInterval = 1000;
                 _mainInstance.SetVariableEvents(true);
                 Logging.Init(_aX, _mainInstance);
                 _varConverter = new VariableConverter(_mainInstance);
@@ -303,7 +304,14 @@ namespace StaKoTecHomeGear
             }
             finally
             {
-                sender.Set(false);
+                try
+                {
+                    sender.Set(false);
+                }
+                catch (Exception ex)
+                {
+                    Logging.WriteLog(ex.Message, ex.StackTrace);
+                }
             }
         }
 
@@ -438,39 +446,47 @@ namespace StaKoTecHomeGear
 
         List<String> getHomeGearClasses()
         {
-            AXVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
-            List<String> classNames = _aX.GetClassNames();
             List<String> homeGearClassNames = new List<String>();
-            foreach (String name in classNames)
+            try
             {
-                String[] tempName = name.Split('/');
-                if (tempName.Length < 3) continue;
-                String system = tempName[tempName.Length - 3];
-                String aktName = "";
-                if (system == "HomeGear")  //Klassen müssen im Verzeichnis HomeGear sein
+                AXVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
+                List<String> classNames = _aX.GetClassNames();
+                
+                foreach (String name in classNames)
                 {
-                    aktName = tempName[tempName.Length - 1].Substring(0, tempName[tempName.Length - 1].Length - 7);
-                    if (aktName == "HomeGear")  //Die HomeGear-Verwaltungs heisst HomeGear - sie sol nicht in die Klassen-übersicht
-                        continue;
+                    String[] tempName = name.Split('/');
+                    if (tempName.Length < 3) continue;
+                    String system = tempName[tempName.Length - 3];
+                    String aktName = "";
+                    if (system == "HomeGear")  //Klassen müssen im Verzeichnis HomeGear sein
+                    {
+                        aktName = tempName[tempName.Length - 1].Substring(0, tempName[tempName.Length - 1].Length - 7);
+                        if (aktName == "HomeGear")  //Die HomeGear-Verwaltungs heisst HomeGear - sie sol nicht in die Klassen-übersicht
+                            continue;
 
-                    if (!homeGearClassNames.Contains(aktName))
-                        homeGearClassNames.Add(aktName);
+                        if (!homeGearClassNames.Contains(aktName))
+                            homeGearClassNames.Add(aktName);
+                    }
                 }
-            }
-            homeGearClassNames.Sort();
+                homeGearClassNames.Sort();
 
-            UInt16 i = 0;
-            UInt16 x = 0;
-            foreach (String name in homeGearClassNames)
+                UInt16 i = 0;
+                UInt16 x = 0;
+                foreach (String name in homeGearClassNames)
+                {
+                    if (i > homeGearKlassen.Length)
+                        break;
+                    homeGearKlassen.Set(i, name);
+                    i++;
+                }
+
+                for (; i < homeGearKlassen.Length; i++)
+                    homeGearKlassen.Set(i, "");
+            }
+            catch (Exception ex)
             {
-                if (i > homeGearKlassen.Length)
-                    break;
-                homeGearKlassen.Set(i, name);
-                i++;
+                Logging.WriteLog(ex.Message, ex.StackTrace);
             }
-
-            for (; i < homeGearKlassen.Length; i++)
-                homeGearKlassen.Set(i, "");
 
             return homeGearClassNames;
         }
@@ -483,6 +499,7 @@ namespace StaKoTecHomeGear
                     return;
 
                 _initCompleted = false;
+                _polledVariablesCount = _mainInstance.PolledVariablesCount;
 
                 if(!_instanzenMutex.WaitOne(10000))
                 {
@@ -579,18 +596,19 @@ namespace StaKoTecHomeGear
                             if (aktInstanz.VariableExists("Name"))
                                 aktInstanz.Get("Name").Set(devicePair.Value.Name);
 
-                            
-                            aktInstanz.SetVariableEvents(true);
-                            aktInstanz.PollingInterval = 100;
-                            aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged;
+                            aktInstanz.Get("Lifetick").Set(true);
 
+                            aktInstanz.SetVariableEvents(true);
+                            aktInstanz.PollingInterval = 1000;
+                            aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged;
+                            _polledVariablesCount += aktInstanz.PolledVariablesCount;
                             //Alle Sub-Instanzen auslesen und ebenfalls VariableChanged-Events drauf los lassen
                             foreach (AXInstance aktSubinstance in aktInstanz.Subinstances)
                             {
-                                AXInstance subVars = aktInstanz.GetSubinstance(aktSubinstance.Name);
-                                subVars.VariableValueChanged += Subinstance_VariableValueChanged;
-                                subVars.SetVariableEvents(true);
-                                subVars.PollingInterval = 100;
+                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
+                                aktSubinstance.VariableValueChanged += Subinstance_VariableValueChanged;
+                                aktSubinstance.SetVariableEvents(true);
+                                aktSubinstance.PollingInterval = 1000;
                             }
 
                             //Aktuelle Config- und Statuswerte Werte auslesen
@@ -678,19 +696,31 @@ namespace StaKoTecHomeGear
             }
             finally
             {
-                sender.Set(false);
+                try
+                {
+                    sender.Set(false);
+                    _mainInstance.Get("PolledVariables").Set(_polledVariablesCount);
+                }
+                catch (Exception ex)
+                {
+                    Logging.WriteLog(ex.Message, ex.StackTrace);
+                }
             }
         }
 
         void Subinstance_VariableValueChanged(AXVariable sender)
         {
-            Logging.WriteLog("Variable " + sender.Path + " has changed");
+            Logging.WriteLog("Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
             string[] teile = sender.Path.Split('.');
+            if (teile.Length == 0)
+                return;
+
             String parentInstanceName = teile.First();
-            AXInstance parentInstance = new AXInstance(_aX, parentInstanceName, "Status", "err");
+            
             _homegearDevicesMutex.WaitOne();
             try
             {
+                AXInstance parentInstance = new AXInstance(_aX, parentInstanceName, "Status", "err");
                 if (_homegear.Devices.ContainsKey(parentInstance.Get("ID").GetLongInteger()))
                 {
                     Device aktDevice = _homegear.Devices[parentInstance.Get("ID").GetLongInteger()];
@@ -804,8 +834,15 @@ namespace StaKoTecHomeGear
             }
             finally
             {
-                if (sender.Name == "SetConfigValues")
-                    sender.Set(false);
+                try
+                {
+                    if (sender.Name == "SetConfigValues")
+                        sender.Set(false);
+                }
+                catch (Exception ex)
+                {
+                    Logging.WriteLog(ex.Message, ex.StackTrace);
+                }
             }
         }
 
@@ -817,13 +854,20 @@ namespace StaKoTecHomeGear
 
         void _aX_SpsIdChanged(AX sender)
         {
-            if (!_initCompleted) return;
-            _initCompleted = false;
+            try
+            {
+                if (!_initCompleted) return;
+                _initCompleted = false;
 
-            Logging.WriteLog("SPS-ID Changed! Triggering Init!");
-            AXVariable init = _mainInstance.Get("Init");
-            init.Set(true);
-            init_ValueChanged(init);
+                Logging.WriteLog("SPS-ID Changed! Triggering Init!");
+                AXVariable init = _mainInstance.Get("Init");
+                init.Set(true);
+                init_ValueChanged(init);
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
         }
 
 
@@ -989,9 +1033,9 @@ namespace StaKoTecHomeGear
 
         void _homegear_ReloadRequired(Homegear sender, ReloadType reloadType)
         {
-            _mainInstance.Status = "RPC: Reload erforderlich (" + reloadType.ToString() + ")";
             try
             {
+                _mainInstance.Status = "RPC: Reload erforderlich (" + reloadType.ToString() + ")";
                 if (reloadType == ReloadType.Full)
                 {
                     try
@@ -1064,13 +1108,23 @@ namespace StaKoTecHomeGear
 
         void _homegear_DeviceVariableUpdated(Homegear sender, Device device, Channel channel, Variable variable)
         {
+            Int32 deviceID = 0;
             try
             {
                 _homegearDevicesMutex.WaitOne();
                 _instanzenMutex.WaitOne();
-                Int32 deviceID = device.ID;
+                deviceID = device.ID;
                 _homegearDevicesMutex.ReleaseMutex();
+            }
+            catch (Exception ex)
+            {
+                _homegearDevicesMutex.ReleaseMutex();
+                _mainInstance.Error = ex.Message;
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
 
+            try
+            {
                 _mainInstance.Status = "RPC: " + deviceID.ToString() + " " + variable.Name + " = " + variable.ToString();
 
                 if (_instanzen.ContainsKey(deviceID))
@@ -1107,7 +1161,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _homegearDevicesMutex.ReleaseMutex();
                 _instanzenMutex.ReleaseMutex();
                 _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
