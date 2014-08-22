@@ -47,6 +47,11 @@ namespace StaKoTecHomeGear
                     defaultVar = aktVar.DefaultBoolean.ToString();
                     typ = "BOOL";
                 }
+                else if (aktVar.Type == VariableType.tAction)
+                {
+                    defaultVar = "";
+                    typ = "ACTION (BOOL)";
+                }
                 else if (aktVar.Type == VariableType.tEnum)
                 {
                     defaultVar = aktVar.DefaultInteger.ToString();
@@ -107,6 +112,11 @@ namespace StaKoTecHomeGear
                 {
                     defaultVar = aktVar.DefaultBoolean.ToString();
                     typ = "BOOL";
+                }
+                else if (aktVar.Type == VariableType.tAction)
+                {
+                    defaultVar = "";
+                    typ = "ACTION (BOOL)";
                 }
                 else if (aktVar.Type == VariableType.tEnum)
                 {
@@ -174,6 +184,7 @@ namespace StaKoTecHomeGear
                 switch (aXVar.Type)
                 {
                     case AXVariableType.axBool:
+                        if ((homegearVar.Type == VariableType.tAction) && !aXVar.GetBool()) return;
                         homegearVar.BooleanValue = aXVar.GetBool();
                         break;
                     case AXVariableType.axInteger:
@@ -253,6 +264,7 @@ namespace StaKoTecHomeGear
                 switch (Var.Type)
                 {
                     case VariableType.tBoolean:
+                    case VariableType.tAction:
                         stringVar = Var.BooleanValue.ToString();
                         break;
                     case VariableType.tDouble:
@@ -283,6 +295,9 @@ namespace StaKoTecHomeGear
                 switch (homegearVar.Type)
                 {
                     case VariableType.tBoolean:
+                        aXVar.Set(homegearVar.BooleanValue);
+                        break;
+                    case VariableType.tAction:
                         aXVar.Set(homegearVar.BooleanValue);
                         break;
                     case VariableType.tDouble:

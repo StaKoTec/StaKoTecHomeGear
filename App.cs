@@ -19,7 +19,7 @@ namespace StaKoTecHomeGear
         KeineInstanzVorhanden = 3
     }
 
-    class App
+    class App : IDisposable
     {
         //Globale Variablen
         bool _disposing = false;
@@ -436,8 +436,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
-                _mainInstance.Status = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
             return className;
@@ -471,7 +469,6 @@ namespace StaKoTecHomeGear
                 homeGearClassNames.Sort();
 
                 UInt16 i = 0;
-                UInt16 x = 0;
                 foreach (String name in homeGearClassNames)
                 {
                     if (i > homeGearKlassen.Length)
@@ -733,26 +730,6 @@ namespace StaKoTecHomeGear
                     type = sender.Instance.Name.Substring(0, 1);
                     Int32.TryParse(sender.Instance.Name.Substring((sender.Instance.Name.Length - 2), 2), out channelIndex);
 
-
-                    /////////////////////////////////////////////////////
-                    // Variablen, die nicht beschrieben werden dürfen, aber in der XML-Datei als writeable gekennzeichnet sind.
-                    // Beschreibt man so eine Variable, passieren komische Dinge in HomeGear
-                    List<String> notWritableVars = new List<String>();
-                    if (parentInstance.VariableExists("NotWritableVars"))
-                    {
-                        AXVariable notWritableVarsAX = parentInstance.Get("NotWritableVars");
-                        for (UInt16 x = 0; x < notWritableVarsAX.Length; x++)
-                            notWritableVars.Add(notWritableVarsAX.GetString(x));
-
-                        if (notWritableVars.Contains(name))
-                        {
-                            //sender.Instance.Status = "VariableName '" + name + "' is in NotWritableVars";
-                            //Logging.WriteLog("VariableName '" + name + "' is in NotWritableVars");
-                            _homegearDevicesMutex.ReleaseMutex();
-                            return;
-                        }
-                    }
-
                     if (aktDevice.Channels.ContainsKey(channelIndex))
                     {
                         Channel channel = aktDevice.Channels[channelIndex];
@@ -831,7 +808,6 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _homegearDevicesMutex.ReleaseMutex();
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
             finally
@@ -858,6 +834,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("Holla0");
                 if (!_initCompleted) return;
                 _initCompleted = false;
 
@@ -865,6 +842,7 @@ namespace StaKoTecHomeGear
                 AXVariable init = _mainInstance.Get("Init");
                 init.Set(true);
                 init_ValueChanged(init);
+                System.Diagnostics.Debug.WriteLine("Holla1");
             }
             catch (Exception ex)
             {
@@ -885,6 +863,7 @@ namespace StaKoTecHomeGear
                 Console.WriteLine("Beende RPC-Server...");
                 _mainInstance.Status = "Beende RPC-Server...";
                 _homegear.Dispose();
+                _rpc.Dispose();
 
                 _mainInstance.Get("err").Set(false);
                 _mainInstance.Get("Init").Set(false);
@@ -897,7 +876,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
             finally
@@ -953,7 +931,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -973,7 +950,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1028,7 +1004,6 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _homegearDevicesMutex.ReleaseMutex();
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1085,7 +1060,6 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _instanzenMutex.ReleaseMutex();
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1103,7 +1077,6 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _instanzenMutex.ReleaseMutex();
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1121,7 +1094,6 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _homegearDevicesMutex.ReleaseMutex();
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
 
@@ -1164,7 +1136,6 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _instanzenMutex.ReleaseMutex();
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1178,7 +1149,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1191,7 +1161,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1205,7 +1174,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1218,7 +1186,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1232,7 +1199,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1245,7 +1211,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
         }
@@ -1259,9 +1224,13 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
+        }
+
+        void IDisposable.Dispose()
+        {
+            Dispose();
         }
     }
 }
