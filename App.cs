@@ -978,6 +978,13 @@ namespace StaKoTecHomeGear
                     //Finish all operations on the device's channel and then call:
                     channel.Reload();
                 }
+                else if (reloadType == DeviceReloadType.Variables)
+                {
+                    Logging.WriteLog("Device variables were updated: Device type: \"" + device.TypeString + "\", ID: " + device.ID.ToString() + ", Channel: " + channel.Index.ToString());
+                    Logging.WriteLog("Reloading variables of channel " + channel.Index + " and device " + device.ID.ToString() + ".");
+                    //Finish all operations on the channels's variables and then call:
+                    channel.Variables.Reload();
+                }
                 else if (reloadType == DeviceReloadType.Links)
                 {
                     Logging.WriteLog("Device links were updated: Device type: \"" + device.TypeString + "\", ID: " + device.ID.ToString() + ", Channel: " + channel.Index.ToString());
