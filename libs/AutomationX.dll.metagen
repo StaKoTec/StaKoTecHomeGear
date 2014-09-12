@@ -1,0 +1,294 @@
+ImageRuntimeVersion: v4.0.30319
+Assembly AutomationX, Version=0.1.*, Culture=Invariante Sprache (Invariantes Land): 
+	hash=SHA1, flags=PublicKey
+Assembly mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Assembly System.Data, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Assembly System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Assembly System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
+	hash=None, flags=None
+Class AutomationX.AXException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :System.Exception
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AXNotRunningException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :AutomationX.AXException
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AXInstanceException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :AutomationX.AXException
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AXVariableException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :AutomationX.AXInstanceException
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AXVariableReadOnlyException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :AutomationX.AXVariableException
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AXVariableTypeException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :AutomationX.AXVariableException
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AXArrayIndexOutOfRangeException: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+  :AutomationX.AXVariableException
+    Void .ctor(System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+Class AutomationX.AX: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+    Void .ctor(): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+  Interfaces:
+    System.IDisposable
+  Properties:
+    Int32 SpsId 'get ' : 
+    Boolean Connected 'get ' : 
+  Events:
+    SpsIdChangedEventHandler SpsIdChanged: SpecialName
+    ShutdownEventHandler ShuttingDown: SpecialName
+  Methods:
+    add_ShuttingDown(ShutdownEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_ShuttingDown(ShutdownEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    add_SpsIdChanged(SpsIdChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_SpsIdChanged(SpsIdChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    get_Connected(): PrivateScope, Public, HideBySig, SpecialName
+    get_SpsId(): PrivateScope, Public, HideBySig, SpecialName
+    CheckRunning(): PrivateScope, Public, HideBySig
+    Shutdown(): PrivateScope, Public, HideBySig
+    GetInstanceNames(String): PrivateScope, Public, HideBySig
+    GetClassNames(): PrivateScope, Public, HideBySig
+    GetClassPath(String): PrivateScope, Public, HideBySig
+    CheckSpsId(): PrivateScope, Public, HideBySig
+    WriteJournal(Int32, String, String, String, String, DateTime): PrivateScope, Public, HideBySig
+    WriteJournal(Int32, String, String, String, String): PrivateScope, Public, HideBySig
+    Dispose(): PrivateScope, Public, Final, Virtual, HideBySig
+Class AutomationX.AX+ShutdownEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
+  :System.MulticastDelegate
+    Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName
+  Methods:
+    Invoke(AX): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    BeginInvoke(AX, AsyncCallback, Object): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    EndInvoke(IAsyncResult): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+Class AutomationX.AX+SpsIdChangedEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
+  :System.MulticastDelegate
+    Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName
+  Methods:
+    Invoke(AX): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    BeginInvoke(AX, AsyncCallback, Object): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    EndInvoke(IAsyncResult): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+Class AutomationX.AXVariable: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+    Void .ctor(AutomationX.AXInstance, System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+  Interfaces:
+    System.IDisposable
+  Properties:
+    Boolean Remote 'get ' : 
+    Boolean Parameter 'get ' : 
+    Boolean ConfigurationValue 'get ' : 
+    Boolean Local 'get ' : 
+    Boolean Private 'get ' : 
+    Boolean Constant 'get ' : 
+    Boolean Retentive 'get ' : 
+    Boolean Trending 'get ' : 
+    Boolean Global 'get ' : 
+    Boolean NotConnected 'get ' : 
+    Boolean IO 'get ' : 
+    System.String Dimension 'get ' : 
+    Int32 DecimalPoints 'get ' : 
+    UInt16 Length 'get ' : 
+    Boolean IsArray 'get ' : 
+    System.String Remark 'get ' : 
+    AutomationX.AXVariableDeclaration Declaration 'get ' : 
+    System.String ReferenceName 'get ' : 
+    AutomationX.AXVariableType Type 'get ' : 
+    System.String Path 'get ' : 
+    System.String Name 'get ' : 
+    AutomationX.AXInstance Instance 'get ' : 
+    Boolean Events 'get set' : 
+    AutomationX.AX AutomationX 'get ' : 
+  Events:
+    ArrayValueChangedEventHandler ArrayValueChanged: SpecialName
+    ValueChangedEventHandler ValueChanged: SpecialName
+  Methods:
+    GetEnumRemark(Int32): PrivateScope, Public, HideBySig
+    Dispose(): PrivateScope, Public, Final, Virtual, HideBySig
+    Set(UInt16, String): PrivateScope, Public, HideBySig
+    Set(String): PrivateScope, Public, HideBySig
+    Set(UInt16, Double): PrivateScope, Public, HideBySig
+    Set(Double): PrivateScope, Public, HideBySig
+    Set(UInt16, Single): PrivateScope, Public, HideBySig
+    Set(Single): PrivateScope, Public, HideBySig
+    Set(UInt16, UInt32): PrivateScope, Public, HideBySig
+    Set(UInt32): PrivateScope, Public, HideBySig
+    Set(UInt16, UInt16): PrivateScope, Public, HideBySig
+    Set(UInt16): PrivateScope, Public, HideBySig
+    Set(UInt16, Int32): PrivateScope, Public, HideBySig
+    Set(Int32): PrivateScope, Public, HideBySig
+    Set(UInt16, Int16): PrivateScope, Public, HideBySig
+    Set(Int16): PrivateScope, Public, HideBySig
+    Set(UInt16, SByte IsSignUnspecifiedByte): PrivateScope, Public, HideBySig
+    Set(SByte IsSignUnspecifiedByte): PrivateScope, Public, HideBySig
+    Set(UInt16, Byte): PrivateScope, Public, HideBySig
+    Set(Byte): PrivateScope, Public, HideBySig
+    Set(UInt16, Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    Set(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    add_ValueChanged(ValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_ValueChanged(ValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    add_ArrayValueChanged(ArrayValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_ArrayValueChanged(ArrayValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    get_AutomationX(): PrivateScope, Public, HideBySig, SpecialName
+    get_Events(): PrivateScope, Public, HideBySig, SpecialName
+    set_Events(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig, SpecialName
+    get_Instance(): PrivateScope, Public, HideBySig, SpecialName
+    get_Name(): PrivateScope, Public, HideBySig, SpecialName
+    get_Path(): PrivateScope, Public, HideBySig, SpecialName
+    get_Type(): PrivateScope, Public, HideBySig, SpecialName
+    get_ReferenceName(): PrivateScope, Public, HideBySig, SpecialName
+    get_Declaration(): PrivateScope, Public, HideBySig, SpecialName
+    get_Remark(): PrivateScope, Public, HideBySig, SpecialName
+    get_IsArray(): PrivateScope, Public, HideBySig, SpecialName
+    get_Length(): PrivateScope, Public, HideBySig, SpecialName
+    get_DecimalPoints(): PrivateScope, Public, HideBySig, SpecialName
+    get_Dimension(): PrivateScope, Public, HideBySig, SpecialName
+    get_IO(): PrivateScope, Public, HideBySig, SpecialName
+    get_NotConnected(): PrivateScope, Public, HideBySig, SpecialName
+    get_Global(): PrivateScope, Public, HideBySig, SpecialName
+    get_Trending(): PrivateScope, Public, HideBySig, SpecialName
+    get_Retentive(): PrivateScope, Public, HideBySig, SpecialName
+    get_Constant(): PrivateScope, Public, HideBySig, SpecialName
+    get_Private(): PrivateScope, Public, HideBySig, SpecialName
+    get_Local(): PrivateScope, Public, HideBySig, SpecialName
+    get_ConfigurationValue(): PrivateScope, Public, HideBySig, SpecialName
+    get_Parameter(): PrivateScope, Public, HideBySig, SpecialName
+    get_Remote(): PrivateScope, Public, HideBySig, SpecialName
+    Clear(): PrivateScope, Public, HideBySig
+    Refresh(UInt16, Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    Refresh(UInt16): PrivateScope, Public, HideBySig
+    Refresh(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    Refresh(): PrivateScope, Public, HideBySig
+    GetBool(UInt16): PrivateScope, Public, HideBySig
+    GetBool(): PrivateScope, Public, HideBySig
+    GetByte(UInt16): PrivateScope, Public, HideBySig
+    GetByte(): PrivateScope, Public, HideBySig
+    GetShortInteger(UInt16): PrivateScope, Public, HideBySig
+    GetShortInteger(): PrivateScope, Public, HideBySig
+    GetInteger(UInt16): PrivateScope, Public, HideBySig
+    GetInteger(): PrivateScope, Public, HideBySig
+    GetLongInteger(UInt16): PrivateScope, Public, HideBySig
+    GetLongInteger(): PrivateScope, Public, HideBySig
+    GetUnsignedInteger(UInt16): PrivateScope, Public, HideBySig
+    GetUnsignedInteger(): PrivateScope, Public, HideBySig
+    GetUnsignedLongInteger(UInt16): PrivateScope, Public, HideBySig
+    GetUnsignedLongInteger(): PrivateScope, Public, HideBySig
+    GetReal(UInt16): PrivateScope, Public, HideBySig
+    GetReal(): PrivateScope, Public, HideBySig
+    GetLongReal(UInt16): PrivateScope, Public, HideBySig
+    GetLongReal(): PrivateScope, Public, HideBySig
+    GetString(UInt16): PrivateScope, Public, HideBySig
+    GetString(): PrivateScope, Public, HideBySig
+Class AutomationX.AXVariable+ValueChangedEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
+  :System.MulticastDelegate
+    Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName
+  Methods:
+    Invoke(AXVariable): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    BeginInvoke(AXVariable, AsyncCallback, Object): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    EndInvoke(IAsyncResult): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+Class AutomationX.AXVariable+ArrayValueChangedEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
+  :System.MulticastDelegate
+    Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName
+  Methods:
+    Invoke(AXVariable, UInt16): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    BeginInvoke(AXVariable, UInt16, AsyncCallback, Object): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    EndInvoke(IAsyncResult): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+Class AutomationX.AXInstance: AutoLayout, AnsiClass, Class, Public, BeforeFieldInit
+    Void .ctor(AutomationX.AX, System.String, System.String, System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(AutomationX.AX, AutomationX.AXInstance, System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+    Void .ctor(AutomationX.AX, System.String): PrivateScope, Public, HideBySig, SpecialName, RTSpecialName
+  Interfaces:
+    System.IDisposable
+  Properties:
+    AutomationX.AXVariable Item [System.String] 'get ' : 
+    AutomationX.AXInstance[] Subinstances 'get ' : 
+    AutomationX.AXVariable[] Variables 'get ' : 
+    Int32 PollingInterval 'get set' : 
+    System.String Error 'get set' : 
+    System.String Status 'get set' : 
+    Int32 PolledVariablesCount 'get ' : 
+    System.String Remark 'get ' : 
+    System.String Path 'get ' : 
+    System.String Name 'get ' : 
+    AutomationX.AX AutomationX 'get ' : 
+  Events:
+    ArrayValueChangedEventHandler ArrayValueChanged: SpecialName
+    ValueChangedEventHandler VariableValueChanged: SpecialName
+    ErrorEventHandler ErrorEvent: SpecialName
+    StatusEventHandler StatusEvent: SpecialName
+  Methods:
+    add_StatusEvent(StatusEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_StatusEvent(StatusEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    add_ErrorEvent(ErrorEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_ErrorEvent(ErrorEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    add_VariableValueChanged(ValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_VariableValueChanged(ValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    add_ArrayValueChanged(ArrayValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    remove_ArrayValueChanged(ArrayValueChangedEventHandler): PrivateScope, Public, HideBySig, SpecialName
+    get_AutomationX(): PrivateScope, Public, HideBySig, SpecialName
+    get_Name(): PrivateScope, Public, HideBySig, SpecialName
+    get_Path(): PrivateScope, Public, HideBySig, SpecialName
+    get_Remark(): PrivateScope, Public, HideBySig, SpecialName
+    get_PolledVariablesCount(): PrivateScope, Public, HideBySig, SpecialName
+    get_Status(): PrivateScope, Public, HideBySig, SpecialName
+    set_Status(String): PrivateScope, Public, HideBySig, SpecialName
+    get_Error(): PrivateScope, Public, HideBySig, SpecialName
+    set_Error(String): PrivateScope, Public, HideBySig, SpecialName
+    get_PollingInterval(): PrivateScope, Public, HideBySig, SpecialName
+    set_PollingInterval(Int32): PrivateScope, Public, HideBySig, SpecialName
+    get_Variables(): PrivateScope, Public, HideBySig, SpecialName
+    get_Subinstances(): PrivateScope, Public, HideBySig, SpecialName
+    get_Item(String): PrivateScope, Public, HideBySig, SpecialName
+    Get(String): PrivateScope, Public, HideBySig
+    GetSubinstance(String): PrivateScope, Public, HideBySig
+    VariableExists(String): PrivateScope, Public, HideBySig
+    SubinstanceExists(String): PrivateScope, Public, HideBySig
+    SetVariableEvents(Boolean(HasFieldMarshal)): PrivateScope, Public, HideBySig
+    Dispose(): PrivateScope, Public, Final, Virtual, HideBySig
+Class AutomationX.AXInstance+StatusEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
+  :System.MulticastDelegate
+    Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName
+  Methods:
+    Invoke(AXInstance, String): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    BeginInvoke(AXInstance, String, AsyncCallback, Object): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    EndInvoke(IAsyncResult): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+Class AutomationX.AXInstance+ErrorEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
+  :System.MulticastDelegate
+    Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName
+  Methods:
+    Invoke(AXInstance, String): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    BeginInvoke(AXInstance, String, AsyncCallback, Object): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+    EndInvoke(IAsyncResult): PrivateScope, Public, Final, Virtual, VtableLayoutMask
+Struct AutomationX.AXVariableType: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
+  :System.Enum
+  Fields:
+    Int32 value__ : Public, SpecialName, RTSpecialName
+    AutomationX.AXVariableType axBool = 2 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axByte = 3 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axShortInteger = 4 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axInteger = 6 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axLongInteger = 8 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axUnsignedShortInteger = 5 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axUnsignedInteger = 7 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axUnsignedLongInteger = 9 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axReal = 10 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axLongReal = 12 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axString = 13 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableType axAlarm = 18 : Public, Static, Literal, HasDefault
+Struct AutomationX.AXVariableDeclaration: AutoLayout, AnsiClass, Class, Public, Sealed, BeforeFieldInit
+  :System.Enum
+  Fields:
+    Int32 value__ : Public, SpecialName, RTSpecialName
+    AutomationX.AXVariableDeclaration axVar = 0 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableDeclaration axVarInput = 1 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableDeclaration axVarOutput = 2 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableDeclaration axVarInputOutput = 3 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableDeclaration axVarExternal = 4 : Public, Static, Literal, HasDefault
+    AutomationX.AXVariableDeclaration axVarGlobal = 5 : Public, Static, Literal, HasDefault

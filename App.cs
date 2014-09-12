@@ -494,7 +494,7 @@ namespace StaKoTecHomeGear
             {
                 if (!sender.GetBool())
                     return;
-
+                
                 _initCompleted = false;
                 _polledVariablesCount = _mainInstance.PolledVariablesCount;
 
