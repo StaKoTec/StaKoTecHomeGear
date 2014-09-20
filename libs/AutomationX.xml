@@ -47,6 +47,9 @@
             <param name="variableName">The name of the variable.</param>
             <return>Returns an aX variable object or null, when the variable was not found.</return>
         </member>
+        <member name="P:AutomationX.AXInstance.Parent">
+            <summary>Returns the parent instance.</summary>
+        </member>
         <member name="P:AutomationX.AXInstance.Subinstances">
             <summary>Returns a collection of all subinstances.</summary>
         </member>

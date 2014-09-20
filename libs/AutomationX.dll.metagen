@@ -1,5 +1,5 @@
 ImageRuntimeVersion: v4.0.30319
-Assembly AutomationX, Version=0.1.*, Culture=Invariante Sprache (Invariantes Land): 
+Assembly AutomationX, Version=0.1.*, Culture=Invariant Language (Invariant Country): 
 	hash=SHA1, flags=PublicKey
 Assembly mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
 	hash=None, flags=None
@@ -208,6 +208,7 @@ Class AutomationX.AXInstance: AutoLayout, AnsiClass, Class, Public, BeforeFieldI
     System.IDisposable
   Properties:
     AutomationX.AXVariable Item [System.String] 'get ' : 
+    AutomationX.AXInstance Parent 'get ' : 
     AutomationX.AXInstance[] Subinstances 'get ' : 
     AutomationX.AXVariable[] Variables 'get ' : 
     Int32 PollingInterval 'get set' : 
@@ -245,6 +246,7 @@ Class AutomationX.AXInstance: AutoLayout, AnsiClass, Class, Public, BeforeFieldI
     set_PollingInterval(Int32): PrivateScope, Public, HideBySig, SpecialName
     get_Variables(): PrivateScope, Public, HideBySig, SpecialName
     get_Subinstances(): PrivateScope, Public, HideBySig, SpecialName
+    get_Parent(): PrivateScope, Public, HideBySig, SpecialName
     get_Item(String): PrivateScope, Public, HideBySig, SpecialName
     Get(String): PrivateScope, Public, HideBySig
     GetSubinstance(String): PrivateScope, Public, HideBySig
