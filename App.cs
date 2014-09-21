@@ -529,15 +529,7 @@ namespace StaKoTecHomeGear
                 // Alle HomeGear Instanzen auslesen
                 List<String> homegearClasses = getHomeGearClasses();
                 
-                //Alle instanz-handles wieder aufheben 
-                /*if (_instanzen != null)
-                {
-                    foreach (KeyValuePair<Int32, AXInstance> disposeInstance in _instanzen)
-                    {
-                        Logging.WriteLog("Moin " + disposeInstance.Value.Name);
-                        disposeInstance.Value.Dispose();
-                    }
-                }*/
+                // Überflüssige Instanzen Disposen
                 if (_instanzen != null)
                 {
                     foreach (KeyValuePair<Int32, AXInstance> instancePair in _instanzen)
@@ -551,9 +543,8 @@ namespace StaKoTecHomeGear
                         _instancesToDispose.Enqueue(instancePair.Value);
                     }
                 }
+
                 _instanzen = new Dictionary<Int32, AXInstance>();
-                //Nicht disposen -> HomegearLib  merkt, wenn sich spsid gechanged hat.
-                // lieber gucken, ob neue instanzen hinzugekommen sind oder alte gelöscht wurden und in _instanzen hinzufügen oder löschen#!!!!!!!!
                 Dictionary<Int32, AXInstance> tempinstanzen = new Dictionary<Int32, AXInstance>();
                 Dictionary<Int32, String> classnames = new Dictionary<Int32, String>();
                 foreach (String name in homegearClasses)
@@ -564,7 +555,6 @@ namespace StaKoTecHomeGear
                         AXInstance instanz = new AXInstance(_aX, name2, "Status", "err");
                         if (instanz.Get("ID").GetLongInteger() >= 0)  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1
                         {
-                            //Logging.WriteLog("Adding Instance " + instanz.Name + " (ID: " + instanz.Get("ID").GetLongInteger().ToString() + ")");
                             tempinstanzen.Add(instanz.Get("ID").GetLongInteger(), instanz);
                             classnames.Add(instanz.Get("ID").GetLongInteger(), GetClassname(instanz.Name));
                         }
@@ -575,21 +565,6 @@ namespace StaKoTecHomeGear
                     }
                 }
 
-                //Gucken ob noch in _instanzen irgendwelche Instanzen stehen die es in tempinstanzen schon nicht mehr gibt.
-                /*if (_instanzen != null)
-                {
-                    foreach (KeyValuePair<Int32, AXInstance> disposeInstance in _instanzen)
-                    {
-                        Logging.WriteLog("Checke " + disposeInstance.Value.Name);
-                        if (!tempinstanzen.ContainsValue(disposeInstance.Value))
-                        {
-                            Logging.WriteLog("Dispose " + disposeInstance.Value.Name);
-                            disposeInstance.Value.Dispose();
-                        }
-                        else
-                            Logging.WriteLog(disposeInstance.Value.Name + " ist noch vorhanden");
-                    }
-                }*/
                 x = 0;
                 foreach (KeyValuePair<Int32, Device> devicePair in _homegear.Devices)
                 {
@@ -598,7 +573,7 @@ namespace StaKoTecHomeGear
                     {
                         if (classnames[devicePair.Key] == devicePair.Value.TypeString)
                         {
-                            AXInstance aktInstanz = tempinstanzen[devicePair.Key];
+                            AXInstance aktInstanz = tempinstanzen[devicePair.Key]; 
                             _instanzen[devicePair.Key] = aktInstanz;
                             _deviceTypeString.Set(x, devicePair.Value.TypeString);
                             _deviceInstance.Set(x, aktInstanz.Name);
@@ -608,19 +583,18 @@ namespace StaKoTecHomeGear
                                 _deviceRemark.Set(x, "HomeGear-Name: " + devicePair.Value.Name);
                             else
                                 _deviceRemark.Set(x, "");
+
                             _deviceState.Set(x, "OK");
                             _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
-
                             aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
                             if (aktInstanz.VariableExists("Name"))
                                 aktInstanz.Get("Name").Set(devicePair.Value.Name);
-
                             aktInstanz.Get("Lifetick").Set(true);
-
                             aktInstanz.SetVariableEvents(true);
                             aktInstanz.PollingInterval = 20;
-                            aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged;
-                            _polledVariablesCount += aktInstanz.PolledVariablesCount;
+                            aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged; 
+                            //_polledVariablesCount += aktInstanz.PolledVariablesCount;
+
                             //Alle Sub-Instanzen auslesen und ebenfalls VariableChanged-Events drauf los lassen
                             //Logging.WriteLog("Adding Instance-Event for " + aktInstanz.Path + " (" + aktInstanz.Subinstances.Length + " Subinstances)");
                             foreach (AXInstance aktSubinstance in aktInstanz.Subinstances)
@@ -629,7 +603,7 @@ namespace StaKoTecHomeGear
                                 aktSubinstance.PollingInterval = 20;
                                 aktSubinstance.VariableValueChanged += Subinstance_VariableValueChanged;
                                 //Logging.WriteLog("Adding Subinstance-Event for " + aktSubinstance.Path);
-                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
+                                //_polledVariablesCount += aktSubinstance.PolledVariablesCount;
                             }
 
                             //Aktuelle Config- und Statuswerte Werte auslesen
@@ -728,6 +702,7 @@ namespace StaKoTecHomeGear
                 try
                 {
                     sender.Set(false);
+                    Logging.WriteLog("Init completely finished");
                     _mainInstance.Get("PolledVariables").Set(_polledVariablesCount);
                 }
                 catch (Exception ex)
