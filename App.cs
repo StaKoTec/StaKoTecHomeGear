@@ -42,7 +42,7 @@ namespace StaKoTecHomeGear
         Dictionary<Int32, AXInstance> _instanzen = null;
         Mutex _homegearDevicesMutex = new Mutex();
         Mutex _instanzenMutex = new Mutex();
-        Queue<AXInstance> _instancesToDispose = new Queue<AXInstance>();
+        //Queue<AXInstance> _instancesToDispose = new Queue<AXInstance>();
 
         public void Run(String instanceName)
         {
@@ -140,10 +140,10 @@ namespace StaKoTecHomeGear
                         }
                         _instanzenMutex.ReleaseMutex();
 
-                        while(_instancesToDispose.Count > 0)
+                        /*while(_instancesToDispose.Count > 0)
                         {
                             _instancesToDispose.Dequeue().Dispose();
-                        }
+                        }*/
 
                         if (_homegear != null && _initCompleted && j % 10 == 0)
                         {
@@ -538,9 +538,11 @@ namespace StaKoTecHomeGear
                         foreach (AXInstance aktSubinstance in instancePair.Value.Subinstances)
                         {
                             aktSubinstance.VariableValueChanged -= Subinstance_VariableValueChanged;
-                            _instancesToDispose.Enqueue(aktSubinstance);
+                           //_instancesToDispose.Enqueue(aktSubinstance);
+                            aktSubinstance.Dispose();
                         }
-                        _instancesToDispose.Enqueue(instancePair.Value);
+                        instancePair.Value.Dispose();
+                        //_instancesToDispose.Enqueue(instancePair.Value);
                     }
                 }
 
@@ -560,7 +562,8 @@ namespace StaKoTecHomeGear
                         }
                         else
                         {
-                            _instancesToDispose.Enqueue(instanz);
+                            instanz.Dispose();
+                            //_instancesToDispose.Enqueue(instanz);
                         }
                     }
                 }
@@ -671,7 +674,8 @@ namespace StaKoTecHomeGear
                 {
                     if(!_instanzen.ContainsKey(instancePair.Key))
                     {
-                        _instancesToDispose.Enqueue(instancePair.Value);
+                        //_instancesToDispose.Enqueue(instancePair.Value);
+                        instancePair.Value.Dispose();
                     }
                 }
 
