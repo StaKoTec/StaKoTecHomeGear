@@ -1,5 +1,5 @@
 ImageRuntimeVersion: v4.0.30319
-Assembly AutomationX, Version=0.1.*, Culture=Invariant Language (Invariant Country): 
+Assembly AutomationX, Version=0.1.*, Culture=Invariante Sprache (Invariantes Land): 
 	hash=SHA1, flags=PublicKey
 Assembly mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089: 
 	hash=None, flags=None
@@ -110,7 +110,6 @@ Class AutomationX.AXVariable: AutoLayout, AnsiClass, Class, Public, BeforeFieldI
     ArrayValueChangedEventHandler ArrayValueChanged: SpecialName
     ValueChangedEventHandler ValueChanged: SpecialName
   Methods:
-    GetEnumRemark(Int32): PrivateScope, Public, HideBySig
     Dispose(): PrivateScope, Public, Final, Virtual, HideBySig
     Set(UInt16, String): PrivateScope, Public, HideBySig
     Set(String): PrivateScope, Public, HideBySig
@@ -186,6 +185,7 @@ Class AutomationX.AXVariable: AutoLayout, AnsiClass, Class, Public, BeforeFieldI
     GetLongReal(): PrivateScope, Public, HideBySig
     GetString(UInt16): PrivateScope, Public, HideBySig
     GetString(): PrivateScope, Public, HideBySig
+    GetEnumRemark(Int32): PrivateScope, Public, HideBySig
 Class AutomationX.AXVariable+ValueChangedEventHandler: AutoLayout, AnsiClass, Class, NestedPublic, Sealed, BeforeFieldInit
   :System.MulticastDelegate
     Void .ctor(System.Object, IntPtr): PrivateScope, Public, SpecialName, RTSpecialName

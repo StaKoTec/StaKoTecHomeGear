@@ -596,7 +596,7 @@ namespace StaKoTecHomeGear
                             aktInstanz.SetVariableEvents(true);
                             aktInstanz.PollingInterval = 20;
                             aktInstanz.VariableValueChanged += aktInstanz_VariableValueChanged; 
-                            //_polledVariablesCount += aktInstanz.PolledVariablesCount;
+                            _polledVariablesCount += aktInstanz.PolledVariablesCount;
 
                             //Alle Sub-Instanzen auslesen und ebenfalls VariableChanged-Events drauf los lassen
                             //Logging.WriteLog("Adding Instance-Event for " + aktInstanz.Path + " (" + aktInstanz.Subinstances.Length + " Subinstances)");
@@ -606,7 +606,7 @@ namespace StaKoTecHomeGear
                                 aktSubinstance.PollingInterval = 20;
                                 aktSubinstance.VariableValueChanged += Subinstance_VariableValueChanged;
                                 //Logging.WriteLog("Adding Subinstance-Event for " + aktSubinstance.Path);
-                                //_polledVariablesCount += aktSubinstance.PolledVariablesCount;
+                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
                             }
 
                             //Aktuelle Config- und Statuswerte Werte auslesen
