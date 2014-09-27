@@ -205,6 +205,7 @@ namespace StaKoTecHomeGear
                 AXVariable deviceVars_Max = _mainInstance.Get("DeviceVars_Max");
                 AXVariable deviceVars_Default = _mainInstance.Get("DeviceVars_Default");
                 AXVariable deviceVars_RW = _mainInstance.Get("DeviceVars_RW");
+                AXVariable deviceVars_Unit = _mainInstance.Get("DeviceVars_Dimension");
                 UInt16 x = 0;
                 Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
        
@@ -241,7 +242,7 @@ namespace StaKoTecHomeGear
                                 deviceVars_Max.Set(x, maxVar);
                                 deviceVars_Default.Set(x, defaultVar);
                                 deviceVars_RW.Set(x, rwVar);
-
+                                deviceVars_Unit.Set(x, aktVar.Unit);
                                 x++;
                             }
                         }
@@ -273,7 +274,7 @@ namespace StaKoTecHomeGear
                                 deviceVars_Max.Set(x, maxVar);
                                 deviceVars_Default.Set(x, defaultVar);
                                 deviceVars_RW.Set(x, rwVar);
-
+                                deviceVars_Unit.Set(x, aktVar.Unit);
                                 x++;
                             }
                         }
@@ -287,6 +288,7 @@ namespace StaKoTecHomeGear
                         deviceVars_Max.Set(x, "");
                         deviceVars_Default.Set(x, "");
                         deviceVars_RW.Set(x, "");
+                        deviceVars_Unit.Set(x, "");
                     }
                 }
                 _homegearDevicesMutex.ReleaseMutex();
