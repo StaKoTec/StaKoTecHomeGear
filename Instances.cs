@@ -65,6 +65,7 @@ namespace StaKoTecHomeGear
                     List<String> aXInstanceNames = _aX.GetInstanceNames(aktHomegearClass);
                     foreach (String aktaXInstanceName in aXInstanceNames)
                     {
+                        //Logging.WriteLog("Reloade Instanz " + aktaXInstanceName);
                         AXInstance testInstance = new AXInstance(_aX, aktaXInstanceName, "Status", "err");
                         Int32 aktID = testInstance.Get("ID").GetLongInteger();
                         if ((aktID <= 0) || (!homegearDevices.ContainsKey(aktID)))  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1 

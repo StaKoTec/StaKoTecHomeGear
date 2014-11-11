@@ -596,8 +596,6 @@ namespace StaKoTecHomeGear
 
         void OnSubinstanceVariableValueChanged(AXVariable sender)
         {
-            Logging.WriteLog("Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
-             
             _homegearDevicesMutex.WaitOne();
             if (sender == null || sender.Instance == null)
             {
@@ -609,6 +607,7 @@ namespace StaKoTecHomeGear
                 AXInstance parentInstance = sender.Instance.Parent;
                 if (_homegear.Devices.ContainsKey(parentInstance.Get("ID").GetLongInteger()))
                 {
+                    Logging.WriteLog("Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
                     Device aktDevice = _homegear.Devices[parentInstance.Get("ID").GetLongInteger()];
                     String name;
                     String type;
@@ -619,12 +618,14 @@ namespace StaKoTecHomeGear
 
                     if (aktDevice.Channels.ContainsKey(channelIndex))
                     {
+                        //_instances.MutexLocked = true;
                         Channel channel = aktDevice.Channels[channelIndex];
                         if (type == "V")
                         {
                             if (channel.Variables.ContainsKey(name))
                             {
                                 Logging.WriteLog("Set Homegear Variable " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                //SetLastChange(sender.Instance, "Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender)); 
                                 _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
                             }
                         }
@@ -633,9 +634,11 @@ namespace StaKoTecHomeGear
                             if (channel.Config.ContainsKey(name))
                             {
                                 Logging.WriteLog("Set Homegear Config " + parentInstance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                //SetLastChange(sender.Instance, "Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender)); 
                                 _varConverter.SetHomeGearVariable(channel.Config[name], sender);
                             }
                         }
+                        //_instances.MutexLocked = false;
                     }
                 }
                 _homegearDevicesMutex.ReleaseMutex();
@@ -649,6 +652,9 @@ namespace StaKoTecHomeGear
 
         void OnInstanceVariableValueChanged(AXVariable sender)
         {
+            if ((sender.Name == "Lifetick") || (sender.Name == "DataValid"))
+                return;
+
             try
             {
                 _homegearDevicesMutex.WaitOne();
@@ -657,8 +663,11 @@ namespace StaKoTecHomeGear
                     _homegearDevicesMutex.ReleaseMutex();
                     return;
                 }
+
                 if(_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
                 {
+                    //_instances.MutexLocked = true;
+                    Logging.WriteLog("Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
                     Device aktDevice = _homegear.Devices[sender.Instance.Get("ID").GetLongInteger()];
                     String name;
                     String type;
@@ -672,20 +681,34 @@ namespace StaKoTecHomeGear
                             return;
                         }
 
-                        //Alle ConfigValues raussuchen
-                        List<Int32> ChannelsPut = new List<int>();
-                        ChannelsPut.Add(-1);
-                        foreach(AXVariable aktVar in sender.Instance.Variables)
+                        foreach (Int32 aktchannelIndex in aktDevice.Channels.Keys)
                         {
-                            _varConverter.ParseAXVariable(aktVar, out name, out type, out channelIndex);
-                            if (type == "C")
+                            aktDevice.Channels[aktchannelIndex].Config.Put();
+                            Logging.WriteLog("Pushe Config für Kanal " + aktchannelIndex.ToString());
+                            sender.Instance.Status = "Pushe Config für Kanal " + aktchannelIndex.ToString();
+                        }
+                    }
+                    else if (_varConverter.ParseAXVariable(sender, out name, out type, out channelIndex)) 
+                    {
+                        if (aktDevice.Channels.ContainsKey(channelIndex))
+                        {
+                            Channel channel = aktDevice.Channels[channelIndex];
+                            if (type == "V")
                             {
-                                if (ChannelsPut.IndexOf(channelIndex) == -1)
+                                if (channel.Variables.ContainsKey(name))
                                 {
-                                    aktDevice.Channels[channelIndex].Config.Put();
-                                    ChannelsPut.Add(channelIndex);
-                                    Console.WriteLine("Pushe Config für Kanal " + channelIndex.ToString());
-                                    sender.Instance.Status = "Pushe Config für Kanal " + channelIndex.ToString();
+                                    Logging.WriteLog("Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                    //SetLastChange(sender.Instance, "Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                    _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
+                                }
+                            }
+                            else if (type == "C")
+                            {
+                                if (channel.Config.ContainsKey(name))
+                                {
+                                    Logging.WriteLog("Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                    //SetLastChange(sender.Instance, "Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                    _varConverter.SetHomeGearVariable(channel.Config[name], sender);
                                 }
                             }
                         }
@@ -694,6 +717,7 @@ namespace StaKoTecHomeGear
                     {
                         aktDevice.Name = sender.Instance.Get("Name").GetString();
                     }
+                    //_instances.MutexLocked = false;
                 }
                 _homegearDevicesMutex.ReleaseMutex();
             }
@@ -985,7 +1009,7 @@ namespace StaKoTecHomeGear
             {
                 Int32 deviceID = device.ID;
                 _mainInstance.Status = "RPC: " + deviceID.ToString() + " " + variable.Name + " = " + variable.ToString();
-
+                
                 if (_instances.ContainsKey(deviceID))
                 {
                     AXInstance instanz = _instances[deviceID];
@@ -993,27 +1017,25 @@ namespace StaKoTecHomeGear
                     if (instanz.VariableExists(varName))
                     {
                         AXVariable aktAXVar = instanz.Get(varName);
-                        if (aktAXVar != null) _varConverter.SetAXVariable(aktAXVar, variable);
+                        if (aktAXVar != null)
+                        {
+                            _varConverter.SetAXVariable(aktAXVar, variable);
+                            Logging.WriteLog("Setze " + aktAXVar.Path + " = " + variable.ToString());
+                        }
                     }
                     String subinstance = "V" + channel.Index.ToString("D2");
                     if (instanz.SubinstanceExists(subinstance))
                     {
                         AXVariable aktAXVar2 = instanz.GetSubinstance(subinstance).Get(variable.Name);
-                        if (aktAXVar2 != null) _varConverter.SetAXVariable(aktAXVar2, variable);
+                        if (aktAXVar2 != null)
+                        {
+                            _varConverter.SetAXVariable(aktAXVar2, variable);
+                            Logging.WriteLog("Setze " + aktAXVar2.Path + " = " + variable.ToString());
+                        }
                     }
 
-                    AXVariable aXVariable_LastChange = instanz.Get("LastChange");
-                    List<String> lastChange = new List<String>();
-                    UInt16 x = 0;
-
-                    lastChange.Add(DateTime.Now.Hour.ToString("D2") + ":" + DateTime.Now.Minute.ToString("D2") + ":" + DateTime.Now.Second.ToString("D2") + ": " + varName + " = " + variable.ToString());
-                    for (x = 0; x < aXVariable_LastChange.Length; x++)
-                        lastChange.Add(aXVariable_LastChange.GetString(x));
-                    for (x = 0; x < aXVariable_LastChange.Length; x++)
-                        aXVariable_LastChange.Set(x, lastChange[x]);
-
-
-                    instanz.Status = varName + " = " + variable.ToString();
+                    SetLastChange(instanz, varName + " = " + variable.ToString());
+                    
                     //Console.WriteLine(device.SerialNumber + ": " + variable.Name + ": " + variable.ToString());
                 }
             }
@@ -1022,6 +1044,31 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
             _instances.MutexLocked = false;
+        }
+
+        void SetLastChange(AXInstance instanz, String text)
+        {
+            try
+            {
+                if (!instanz.VariableExists("LastChange"))
+                    return;
+
+                AXVariable aXVariable_LastChange = instanz.Get("LastChange");
+                List<String> lastChange = new List<String>();
+                UInt16 x = 0;
+
+                lastChange.Add(DateTime.Now.Hour.ToString("D2") + ":" + DateTime.Now.Minute.ToString("D2") + ":" + DateTime.Now.Second.ToString("D2") + ": " + text);
+                for (x = 0; x < aXVariable_LastChange.Length; x++)
+                    lastChange.Add(aXVariable_LastChange.GetString(x));
+                for (x = 0; x < aXVariable_LastChange.Length; x++)
+                    aXVariable_LastChange.Set(x, lastChange[x]);
+
+                instanz.Status = text;
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
         }
 
 

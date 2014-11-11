@@ -18,7 +18,7 @@ namespace StaKoTecHomeGear
         {
             _aX = ax;
             _mainInstance = mainInstance;
-            String logPath = _mainInstance.Get("$$_working_part").GetString() + "\\StaKoTecHomeGear.txt";
+            String logPath = _mainInstance.Get("$$_working_part").GetString() + "\\Log_" + mainInstance.Name + ".txt";
             _logWriter = new System.IO.StreamWriter(logPath, true, Encoding.UTF8, 1024);
             _logWriter.AutoFlush = true;
         }
