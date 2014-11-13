@@ -624,7 +624,7 @@ namespace StaKoTecHomeGear
                         {
                             if (channel.Variables.ContainsKey(name))
                             {
-                                Logging.WriteLog("Set Homegear Variable " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                Logging.WriteLog("[aX -> HomeGear] Set variable " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                 //SetLastChange(sender.Instance, "Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender)); 
                                 _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
                             }
@@ -633,7 +633,7 @@ namespace StaKoTecHomeGear
                         {
                             if (channel.Config.ContainsKey(name))
                             {
-                                Logging.WriteLog("Set Homegear Config " + parentInstance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                Logging.WriteLog("[aX -> HomeGear] Set Config " + parentInstance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                 //SetLastChange(sender.Instance, "Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender)); 
                                 _varConverter.SetHomeGearVariable(channel.Config[name], sender);
                             }
@@ -697,7 +697,7 @@ namespace StaKoTecHomeGear
                             {
                                 if (channel.Variables.ContainsKey(name))
                                 {
-                                    Logging.WriteLog("Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                    Logging.WriteLog("[aX -> HomeGear] Set Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     //SetLastChange(sender.Instance, "Set Homegear Variable " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
                                 }
@@ -706,7 +706,7 @@ namespace StaKoTecHomeGear
                             {
                                 if (channel.Config.ContainsKey(name))
                                 {
-                                    Logging.WriteLog("Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                    Logging.WriteLog("[aX -> HomeGear] Set Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     //SetLastChange(sender.Instance, "Set Homegear Config " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     _varConverter.SetHomeGearVariable(channel.Config[name], sender);
                                 }
@@ -1020,7 +1020,7 @@ namespace StaKoTecHomeGear
                         if (aktAXVar != null)
                         {
                             _varConverter.SetAXVariable(aktAXVar, variable);
-                            Logging.WriteLog("Setze " + aktAXVar.Path + " = " + variable.ToString());
+                            Logging.WriteLog("[HomeGear -> aX] Setze " + aktAXVar.Path + " = " + variable.ToString());
                         }
                     }
                     String subinstance = "V" + channel.Index.ToString("D2");
@@ -1030,7 +1030,7 @@ namespace StaKoTecHomeGear
                         if (aktAXVar2 != null)
                         {
                             _varConverter.SetAXVariable(aktAXVar2, variable);
-                            Logging.WriteLog("Setze " + aktAXVar2.Path + " = " + variable.ToString());
+                            Logging.WriteLog("[HomeGear -> aX] Setze " + aktAXVar2.Path + " = " + variable.ToString());
                         }
                     }
 
