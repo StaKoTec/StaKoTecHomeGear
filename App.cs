@@ -97,9 +97,9 @@ namespace StaKoTecHomeGear
                 AXVariable lifetick = _mainInstance.Get("Lifetick");
                 AXVariable aXcycleCounter = _mainInstance.Get("CycleCounter");
                 Int32 cycleCounter = 0;
-                Int32 i = 0;
+                Int32 connectionTimeout = 0;
 
-                
+                AXVariable mainInstanceErr = _mainInstance.Get("err");
 
                 AXVariable start_CAPI_Release = _mainInstance.Get("Start_CAPI_Release");
                 start_CAPI_Release.ValueChanged += start_CAPI_Release_ValueChanged;
@@ -124,12 +124,24 @@ namespace StaKoTecHomeGear
 
                         if (!_rpc.IsConnected)
                         {
-                            Console.WriteLine(i.ToString() + ": Waiting for RPC-Server connection");
-                            _mainInstance.Status = "Waiting for RPC-Server connection...";
+                            _mainInstance.Get("RPC_InitComplete").Set(false);
+                            _initCompleted = false;
+
+                            if (connectionTimeout > 0)
+                                Logging.WriteLog("Waiting for RPC-Server connection... (" + (connectionTimeout * 5).ToString() + " s)");
+
+                            if ((connectionTimeout > 6) && !mainInstanceErr.GetBool())
+                                mainInstanceErr.Set(true);
+
+
                             Thread.Sleep(5000);
-                            i++;
+                            connectionTimeout++;
                             continue;
                         }
+                        else
+                            connectionTimeout = 0;
+
+                        
 
                         //Allen Devices einen Lifetick senden um DataValid zu generieren
                         if (_initCompleted)
@@ -827,7 +839,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("Holla0");
+                System.Diagnostics.Debug.WriteLine("SPS-ID change start");
                 if (!_initCompleted) return;
                 _initCompleted = false;
 
@@ -835,7 +847,7 @@ namespace StaKoTecHomeGear
                 AXVariable init = _mainInstance.Get("Init");
                 init.Set(true);
                 init_ValueChanged(init);
-                System.Diagnostics.Debug.WriteLine("Holla1");
+                System.Diagnostics.Debug.WriteLine("SPS-ID change end");
             }
             catch (Exception ex)
             {
@@ -1081,7 +1093,6 @@ namespace StaKoTecHomeGear
 
         void setDeviceStatusInMaininstance(Variable variable, Int32 id)
         {
-            //Logging.WriteLog("setDeviceStatusInMaininstance: ID " + id.ToString() + " VarType: " + variable.Type.ToString() + " name: " + variable.Name);
             if ((variable.Type != VariableType.tBoolean) || ((variable.Name != "UNREACH") && (variable.Name != "STICKY_UNREACH") && (variable.Name != "LOWBAT") && (variable.Name != "CENTRAL_ADDRESS_SPOOFED")))
                 return;
 
@@ -1100,7 +1111,7 @@ namespace StaKoTecHomeGear
                     }
                     else
                     {
-                        stateOld.Replace(", " + variable.Name, "");
+                        _deviceState.Set(x, stateOld.Replace(", " + variable.Name, ""));
                     }
                 }
             }
