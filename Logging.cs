@@ -29,11 +29,11 @@ namespace StaKoTecHomeGear
             {
                 _logWriter.WriteLine(DateTime.Now.ToString() + ": " + message);
 
-                _aX.WriteJournal(0, _mainInstance.Name, message, "ON", "HomeGear");
+                _aX.WriteJournal(0, _mainInstance.Name, message, "ON", _mainInstance.Name);
                 Console.WriteLine(message);
                 if (stackTrace.Length > 0)
                 {
-                    _aX.WriteJournal(0, _mainInstance.Name, stackTrace, "ON", "HomeGear");
+                    _aX.WriteJournal(0, _mainInstance.Name, stackTrace, "ON", _mainInstance.Name);
                     Console.WriteLine(stackTrace);
                     _logWriter.WriteLine(DateTime.Now.ToString() + ": " + stackTrace);
                 }

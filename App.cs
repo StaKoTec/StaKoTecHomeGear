@@ -16,12 +16,18 @@ namespace StaKoTecHomeGear
         Nichts = 0,
         OK = 1,
         Fehler = 2,
-        KeineInstanzVorhanden = 3
+        KeineInstanzVorhanden = 3,
+        Warnung = 4
     }
+
 
     class App : IDisposable
     {
         //Globale Variablen
+        Dictionary<Int32, String> _deviceStatusText = null;
+        List<String> _errorStates = null;
+        List<String> _warningStates = null;
+
         bool _disposing = false;
         bool _initCompleted = false;
         AX _aX = null;
@@ -56,7 +62,25 @@ namespace StaKoTecHomeGear
                     Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
                     Dispose();
                 }
+                ////////////////////////////////////////////////////////////////////////////////////////////
+                // Status Texte laden
+                _deviceStatusText = new Dictionary<Int32, String>();
+                _deviceStatusText.Add((Int32)DeviceStatus.Nichts, "");
+                _deviceStatusText.Add((Int32)DeviceStatus.OK, "OK");
+                _deviceStatusText.Add((Int32)DeviceStatus.Fehler, "Falsche Klasse (%s)");
+                _deviceStatusText.Add((Int32)DeviceStatus.KeineInstanzVorhanden, "Keine Instanz vorhanden");
+                _deviceStatusText.Add((Int32)DeviceStatus.Warnung, "Warnung");
 
+                // Error- und Warning-States laden
+                _errorStates = new List<String>();
+                _errorStates.Add("UNREACH");
+                _errorStates.Add("STICKY_UNREACH");
+                _errorStates.Add("LOWBAT");
+                _errorStates.Add("CENTRAL_ADDRESS_SPOOFED");
+
+                _warningStates = new List<String>();
+                _warningStates.Add("CONFIG_PENDING");
+             
 
                 _aX.ShuttingDown += aX_ShuttingDown;
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
@@ -91,8 +115,8 @@ namespace StaKoTecHomeGear
                 AXVariable getDeviceConfigVars = _mainInstance.Get("GetDeviceConfigVars");
                 getDeviceConfigVars.Set(false);
                 getDeviceConfigVars.ValueChanged += getDeviceVars_ValueChanged;
-                AXVariable axStartID = _mainInstance.Get("StartID");
-                axStartID.ValueChanged += axStartID_ValueChanged;
+                Int32 axStartID = _mainInstance.Get("StartID").GetInteger();
+                Int32 axStartID_old = axStartID;
 
                 AXVariable lifetick = _mainInstance.Get("Lifetick");
                 AXVariable aXcycleCounter = _mainInstance.Get("CycleCounter");
@@ -122,6 +146,12 @@ namespace StaKoTecHomeGear
                         aXcycleCounter.Set(cycleCounter);
                         cycleCounter++;
 
+                        if (axStartID != axStartID_old)
+                        {
+                            Logging.WriteLog("StartID has changed! Exiting!!!");
+                            Dispose();
+                        }
+
                         if (!_rpc.IsConnected)
                         {
                             _mainInstance.Get("RPC_InitComplete").Set(false);
@@ -139,8 +169,15 @@ namespace StaKoTecHomeGear
                             continue;
                         }
                         else
+                        {
+                            if (connectionTimeout > 0)  //Wenn verbindung wieder hergestellt wurde, neu laden
+                            {
+                                _homegearDevicesMutex.WaitOne();
+                                _homegear.Reload();
+                                _homegearDevicesMutex.ReleaseMutex();
+                            }
                             connectionTimeout = 0;
-
+                        }
                         
 
                         //Allen Devices einen Lifetick senden um DataValid zu generieren
@@ -158,9 +195,9 @@ namespace StaKoTecHomeGear
                             AXVariable aX_serviceMessages = _mainInstance.Get("ServiceMessages");
                             foreach (ServiceMessage message in serviceMessages)
                             {
-                                if ((message.Type == "UNREACH") || (message.Type == "STICKY_UNREACH") || (message.Type == "LOWBAT") || (message.Type == "CENTRAL_ADDRESS_SPOOFED"))
+                                if (_errorStates.Contains(message.Type))
                                     alarmCounter++;
-                                else
+                                if (_warningStates.Contains(message.Type))
                                     warningCounter++;
 
                                 String aktMessage = "Device ID: " + message.PeerID.ToString();
@@ -205,19 +242,6 @@ namespace StaKoTecHomeGear
                 }
             }
             catch(Exception ex)
-            {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
-            }
-        }
-
-        void axStartID_ValueChanged(AXVariable sender)
-        {
-            try
-            {
-                Logging.WriteLog("StartID has changed! Exiting!!!");
-                Dispose();
-            }
-            catch (Exception ex)
             {
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
@@ -570,7 +594,7 @@ namespace StaKoTecHomeGear
                                 else
                                     _deviceRemark.Set(x, "");
 
-                                _deviceState.Set(x, "OK");
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey((Int32)DeviceStatus.OK) ? _deviceStatusText[(Int32)DeviceStatus.OK] : "OK");
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
                                 aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
                                 if (aktInstanz.VariableExists("Name"))
@@ -583,6 +607,8 @@ namespace StaKoTecHomeGear
                                     foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
                                     {
                                         var aktVar = Wert.Value;
+                                        if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
+                                            continue;
                                         String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
                                         if (aktInstanz.VariableExists(aktVarName))
                                         {
@@ -630,7 +656,7 @@ namespace StaKoTecHomeGear
                                 _deviceTypeString.Set(x, devicePair.Value.TypeString);
                                 _deviceInstance.Set(x, "");
                                 _deviceRemark.Set(x, "");
-                                _deviceState.Set(x, "Falsche Klasse! (" + aktInstanz.ClassName + ")");
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey((Int32)DeviceStatus.Fehler) ? _deviceStatusText[(Int32)DeviceStatus.Fehler].Replace("%s", aktInstanz.ClassName) : "Falsche Klasse! (" + aktInstanz.ClassName + ")");
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.Fehler);
                                 _instances.Remove(devicePair.Key, false);
                             }
@@ -640,7 +666,7 @@ namespace StaKoTecHomeGear
                             _deviceTypeString.Set(x, devicePair.Value.TypeString);
                             _deviceInstance.Set(x, "");
                             _deviceRemark.Set(x, "");
-                            _deviceState.Set(x, "Keine Instanz gefunden");
+                            _deviceState.Set(x, _deviceStatusText.ContainsKey((Int32)DeviceStatus.KeineInstanzVorhanden) ? _deviceStatusText[(Int32)DeviceStatus.KeineInstanzVorhanden] : "Keine Instanz gefunden");
                             _deviceStateColor.Set(x, (Int16)DeviceStatus.KeineInstanzVorhanden);
                         }
                         x++;
@@ -689,6 +715,9 @@ namespace StaKoTecHomeGear
 
         void OnSubinstanceVariableValueChanged(AXVariable sender)
         {
+            if ((sender.Name == "Lifetick") || (sender.Name == "DataValid") || (sender.Name == "RSSI") || (sender.Name == "Status") || (sender.Name == "err") || (sender.Name == "LastChange"))
+                return;
+
             _homegearDevicesMutex.WaitOne();
             if (sender == null || sender.Instance == null)
             {
@@ -700,7 +729,7 @@ namespace StaKoTecHomeGear
                 AXInstance parentInstance = sender.Instance.Parent;
                 if (_homegear.Devices.ContainsKey(parentInstance.Get("ID").GetLongInteger()))
                 {
-                    Logging.WriteLog("Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
+                    Logging.WriteLog("aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
                     Device aktDevice = _homegear.Devices[parentInstance.Get("ID").GetLongInteger()];
                     String name;
                     String type;
@@ -743,7 +772,7 @@ namespace StaKoTecHomeGear
 
         void OnInstanceVariableValueChanged(AXVariable sender)
         {
-            if ((sender.Name == "Lifetick") || (sender.Name == "DataValid"))
+            if ((sender.Name == "Lifetick") || (sender.Name == "DataValid") || (sender.Name == "RSSI") || (sender.Name == "Status") || (sender.Name == "err") || (sender.Name == "LastChange"))
                 return;
 
             try
@@ -757,7 +786,7 @@ namespace StaKoTecHomeGear
 
                 if(_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
                 {
-                    Logging.WriteLog("Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
+                    Logging.WriteLog("aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
                     Device aktDevice = _homegear.Devices[sender.Instance.Get("ID").GetLongInteger()];
                     String name;
                     String type;
@@ -1093,7 +1122,7 @@ namespace StaKoTecHomeGear
 
         void setDeviceStatusInMaininstance(Variable variable, Int32 id)
         {
-            if ((variable.Type != VariableType.tBoolean) || ((variable.Name != "UNREACH") && (variable.Name != "STICKY_UNREACH") && (variable.Name != "LOWBAT") && (variable.Name != "CENTRAL_ADDRESS_SPOOFED")))
+            if ( (variable.Type != VariableType.tBoolean) || (!_errorStates.Contains(variable.Name) && !_warningStates.Contains(variable.Name)) )
                 return;
 
             for (UInt16 x = 0; x < _deviceID.Length; x++)
@@ -1107,12 +1136,23 @@ namespace StaKoTecHomeGear
                     if (variable.BooleanValue)
                     {
                         _deviceState.Set(x, stateOld + ", " + variable.Name);
-                        _deviceStateColor.Set(x, (Int16)DeviceStatus.Fehler);
+                        if (_warningStates.Contains(variable.Name) && _deviceStateColor.GetInteger(x) != (Int16)DeviceStatus.Fehler)
+                            _deviceStateColor.Set(x, (Int16)DeviceStatus.Warnung);
+                        else
+                            _deviceStateColor.Set(x, (Int16)DeviceStatus.Fehler);
                     }
                     else
                     {
                         _deviceState.Set(x, stateOld.Replace(", " + variable.Name, ""));
                     }
+
+                    foreach (KeyValuePair<Int32, String> aktdeviceStatusText in _deviceStatusText)
+                    {
+                        if (aktdeviceStatusText.Value == _deviceState.GetString(x))  //Wenn der String wieder genau z.B. "OK" ist, dann en jeweiligen Status der Zeile dementsprechend setzen
+                            _deviceStateColor.Set(x, (Int16)aktdeviceStatusText.Key);
+                    }
+
+                    break;
                 }
             }
         }
