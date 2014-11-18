@@ -24,7 +24,7 @@ namespace StaKoTecHomeGear
     class App : IDisposable
     {
         //Globale Variablen
-        Dictionary<Int32, String> _deviceStatusText = null;
+        Dictionary<DeviceStatus, String> _deviceStatusText = null;
         List<String> _errorStates = null;
         List<String> _warningStates = null;
 
@@ -64,12 +64,12 @@ namespace StaKoTecHomeGear
                 }
                 ////////////////////////////////////////////////////////////////////////////////////////////
                 // Status Texte laden
-                _deviceStatusText = new Dictionary<Int32, String>();
-                _deviceStatusText.Add((Int32)DeviceStatus.Nichts, "");
-                _deviceStatusText.Add((Int32)DeviceStatus.OK, "OK");
-                _deviceStatusText.Add((Int32)DeviceStatus.Fehler, "Falsche Klasse (%s)");
-                _deviceStatusText.Add((Int32)DeviceStatus.KeineInstanzVorhanden, "Keine Instanz vorhanden");
-                _deviceStatusText.Add((Int32)DeviceStatus.Warnung, "Warnung");
+                _deviceStatusText = new Dictionary<DeviceStatus, String>();
+                _deviceStatusText.Add(DeviceStatus.Nichts, "");
+                _deviceStatusText.Add(DeviceStatus.OK, "OK");
+                _deviceStatusText.Add(DeviceStatus.Fehler, "Falsche Klasse (%s)");
+                _deviceStatusText.Add(DeviceStatus.KeineInstanzVorhanden, "Keine Instanz vorhanden");
+                _deviceStatusText.Add(DeviceStatus.Warnung, "Warnung");
 
                 // Error- und Warning-States laden
                 _errorStates = new List<String>();
@@ -161,7 +161,9 @@ namespace StaKoTecHomeGear
                                 Logging.WriteLog("Waiting for RPC-Server connection... (" + (connectionTimeout * 5).ToString() + " s)");
 
                             if ((connectionTimeout > 6) && !mainInstanceErr.GetBool())
-                                mainInstanceErr.Set(true);
+                            {
+                                Logging.WriteLog("Waiting for RPC-Server connection... (" + (connectionTimeout * 5).ToString() + " s)", "", true);
+                            }
 
 
                             Thread.Sleep(5000);
@@ -594,7 +596,7 @@ namespace StaKoTecHomeGear
                                 else
                                     _deviceRemark.Set(x, "");
 
-                                _deviceState.Set(x, _deviceStatusText.ContainsKey((Int32)DeviceStatus.OK) ? _deviceStatusText[(Int32)DeviceStatus.OK] : "OK");
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] : "OK");
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
                                 aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
                                 if (aktInstanz.VariableExists("Name"))
@@ -656,7 +658,7 @@ namespace StaKoTecHomeGear
                                 _deviceTypeString.Set(x, devicePair.Value.TypeString);
                                 _deviceInstance.Set(x, "");
                                 _deviceRemark.Set(x, "");
-                                _deviceState.Set(x, _deviceStatusText.ContainsKey((Int32)DeviceStatus.Fehler) ? _deviceStatusText[(Int32)DeviceStatus.Fehler].Replace("%s", aktInstanz.ClassName) : "Falsche Klasse! (" + aktInstanz.ClassName + ")");
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.Fehler) ? _deviceStatusText[DeviceStatus.Fehler].Replace("%s", aktInstanz.ClassName) : "Falsche Klasse! (" + aktInstanz.ClassName + ")");
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.Fehler);
                                 _instances.Remove(devicePair.Key, false);
                             }
@@ -666,7 +668,7 @@ namespace StaKoTecHomeGear
                             _deviceTypeString.Set(x, devicePair.Value.TypeString);
                             _deviceInstance.Set(x, "");
                             _deviceRemark.Set(x, "");
-                            _deviceState.Set(x, _deviceStatusText.ContainsKey((Int32)DeviceStatus.KeineInstanzVorhanden) ? _deviceStatusText[(Int32)DeviceStatus.KeineInstanzVorhanden] : "Keine Instanz gefunden");
+                            _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.KeineInstanzVorhanden) ? _deviceStatusText[DeviceStatus.KeineInstanzVorhanden] : "Keine Instanz gefunden");
                             _deviceStateColor.Set(x, (Int16)DeviceStatus.KeineInstanzVorhanden);
                         }
                         x++;
@@ -1135,7 +1137,8 @@ namespace StaKoTecHomeGear
                     String stateOld = _deviceState.GetString(x);
                     if (variable.BooleanValue)
                     {
-                        _deviceState.Set(x, stateOld + ", " + variable.Name);
+                        if (!stateOld.Contains(", " + variable.Name))   //Nicht doppelt eintragen falls z.B. UNREACH im aX quittiert wurde und dann nochmal UNREACH aus dem Gerät ausgelesen wird
+                            _deviceState.Set(x, stateOld + ", " + variable.Name);
                         if (_warningStates.Contains(variable.Name) && _deviceStateColor.GetInteger(x) != (Int16)DeviceStatus.Fehler)
                             _deviceStateColor.Set(x, (Int16)DeviceStatus.Warnung);
                         else
@@ -1146,7 +1149,7 @@ namespace StaKoTecHomeGear
                         _deviceState.Set(x, stateOld.Replace(", " + variable.Name, ""));
                     }
 
-                    foreach (KeyValuePair<Int32, String> aktdeviceStatusText in _deviceStatusText)
+                    foreach (KeyValuePair<DeviceStatus, String> aktdeviceStatusText in _deviceStatusText)
                     {
                         if (aktdeviceStatusText.Value == _deviceState.GetString(x))  //Wenn der String wieder genau z.B. "OK" ist, dann en jeweiligen Status der Zeile dementsprechend setzen
                             _deviceStateColor.Set(x, (Int16)aktdeviceStatusText.Key);
