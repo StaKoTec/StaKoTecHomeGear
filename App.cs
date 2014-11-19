@@ -955,15 +955,28 @@ namespace StaKoTecHomeGear
 
                 _homegear = new Homegear(_rpc);
                 _homegear.ConnectError += _homegear_ConnectError;
-                _homegear.SystemVariableUpdated += _homegear_SystemVariableUpdated;
-                _homegear.MetadataUpdated += _homegear_MetadataUpdated;
-                _homegear.DeviceVariableUpdated += _homegear_DeviceVariableUpdated;
                 _homegear.DeviceConfigParameterUpdated += _homegear_DeviceConfigParameterUpdated;
                 _homegear.DeviceLinkConfigParameterUpdated += _homegear_DeviceLinkConfigParameterUpdated;
-                _homegear.ReloadRequired += _homegear_ReloadRequired;
                 _homegear.DeviceReloadRequired += _homegear_DeviceReloadRequired;
-                _homegear.Reloaded += _homegear_Reloaded;
+                _homegear.DeviceVariableUpdated += _homegear_DeviceVariableUpdated;
                 _homegear.EventUpdated += _homegear_EventUpdated;
+                _homegear.HomegearError += _homegear_HomegearError;
+                _homegear.MetadataUpdated += _homegear_MetadataUpdated;
+                _homegear.Reloaded += _homegear_Reloaded;
+                _homegear.ReloadRequired += _homegear_ReloadRequired;
+                _homegear.SystemVariableUpdated += _homegear_SystemVariableUpdated;
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+        }
+
+        void _homegear_HomegearError(Homegear sender, int level, string message)
+        {
+            try
+            {
+                Logging.WriteLog("[HomeGear-Error-Handler] (Level: " + level.ToString() + ") " + message, "", true);
             }
             catch (Exception ex)
             {
@@ -973,7 +986,14 @@ namespace StaKoTecHomeGear
 
         void _homegear_EventUpdated(Homegear sender, Event homegearEvent)
         {
-            Logging.WriteLog("HomeGear Event " + homegearEvent.ToString() + " is updated");
+            try
+            {
+                Logging.WriteLog("HomeGear Event " + homegearEvent.ToString() + " is updated");
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
         }
 
         void _homegear_Reloaded(Homegear sender)
