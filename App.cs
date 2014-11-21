@@ -41,6 +41,8 @@ namespace StaKoTecHomeGear
         AXVariable _deviceTypeString = null;
         AXVariable _deviceState = null;
         AXVariable _deviceStateColor = null;
+        AXVariable _homegearErrorState = null;
+        AXVariable _homegearErrors = null;
         HomegearLib.RPC.RPCController _rpc = null;
         HomegearLib.Homegear _homegear = null;
 
@@ -115,6 +117,22 @@ namespace StaKoTecHomeGear
                 AXVariable getDeviceConfigVars = _mainInstance.Get("GetDeviceConfigVars");
                 getDeviceConfigVars.Set(false);
                 getDeviceConfigVars.ValueChanged += getDeviceVars_ValueChanged;
+                AXVariable homegearErrorQuit = _mainInstance.Get("HomegearErrorQuit");
+                UInt16 x = 0;
+                for (x = 0; x < homegearErrorQuit.Length; x++)
+                    homegearErrorQuit.Set(x, false);
+                homegearErrorQuit.ArrayValueChanged += homegearErrorQuit_ArrayValueChanged;
+                _homegearErrorState = _mainInstance.Get("HomegearErrorState");
+                Int16 errorCount = 0;
+                for (x = 0; x < _homegearErrorState.Length; x++)
+                {
+                    if (_homegearErrorState.GetLongInteger(x) > 0)
+                        errorCount++;
+                }
+                _mainInstance.Get("HomegearError").Set((errorCount > 0));
+                _homegearErrors = _mainInstance.Get("HomegearErrors"); 
+
+
                 Int32 axStartID = _mainInstance.Get("StartID").GetInteger();
                 Int32 axStartID_old = axStartID;
 
@@ -191,9 +209,9 @@ namespace StaKoTecHomeGear
                         {
                             Boolean serviceMessageVorhanden = false;
                             List<ServiceMessage> serviceMessages = _homegear.ServiceMessages;
-                            UInt16 x = 0;
                             Int16 alarmCounter = 0;
                             Int16 warningCounter = 0;
+                            x = 0;
                             AXVariable aX_serviceMessages = _mainInstance.Get("ServiceMessages");
                             foreach (ServiceMessage message in serviceMessages)
                             {
@@ -244,6 +262,76 @@ namespace StaKoTecHomeGear
                 }
             }
             catch(Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+        }
+
+        void homegearErrorQuit_ArrayValueChanged(AXVariable sender, ushort index)
+        {
+            if (sender.GetBool(index))
+                aXremoveHomegearError(index);
+            sender.Set(index, false);
+        }
+
+        void aXremoveHomegearError(UInt16 index)
+        {
+            try
+            {
+                List<String> homegearErrorsTemp = new List<String>();
+                List<Int32> homegearErrorStateTemp = new List<Int32>();
+                UInt16 x = 0;
+                Int16 errorCount = 0;
+                for (x = 0; x < _homegearErrors.Length; x++)
+                {
+                    if (x == index)
+                        continue;
+                    homegearErrorsTemp.Add(_homegearErrors.GetString(x));
+                    homegearErrorStateTemp.Add(_homegearErrorState.GetLongInteger(x));
+                    if (_homegearErrorState.GetLongInteger(x) > 0)
+                        errorCount++;
+                }
+                //Leere Zeile erstellen, damit Liste die gleiche Größe hat wie Array
+                homegearErrorsTemp.Add("");
+                homegearErrorStateTemp.Add(0);
+
+                for (x = 0; x < _homegearErrors.Length; x++)
+                {
+                    _homegearErrors.Set(x, homegearErrorsTemp[x]);
+                    _homegearErrorState.Set(x, homegearErrorStateTemp[x]);
+                }
+
+                _mainInstance.Get("HomegearError").Set((errorCount > 0));
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+        }
+
+        void aXAddHomegearError(String message, Int16 level)
+        {
+            try
+            {
+                List<String> homegearErrorsTemp = new List<String>();
+                List<Int32> homegearErrorStateTemp = new List<Int32>();
+                UInt16 x = 0;
+
+                homegearErrorsTemp.Add(DateTime.Now.Hour.ToString("D2") + ":" + DateTime.Now.Minute.ToString("D2") + ":" + DateTime.Now.Second.ToString("D2") + ": " + message);
+                homegearErrorStateTemp.Add(level);
+                for (x = 0; x < _homegearErrors.Length; x++)
+                {
+                    homegearErrorsTemp.Add(_homegearErrors.GetString(x));
+                    homegearErrorStateTemp.Add(_homegearErrorState.GetLongInteger(x));
+                }
+                for (x = 0; x < _homegearErrors.Length; x++)
+                {
+                    _homegearErrors.Set(x, homegearErrorsTemp[x]);
+                    _homegearErrorState.Set(x, homegearErrorStateTemp[x]);
+                }
+                _mainInstance.Get("HomegearError").Set(true);
+            }
+            catch (Exception ex)
             {
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
@@ -558,7 +646,6 @@ namespace StaKoTecHomeGear
                     return;
                 
                 _initCompleted = false;
-
                 _homegearDevicesMutex.WaitOne();
 
                 UInt16 x = 0;
@@ -976,6 +1063,7 @@ namespace StaKoTecHomeGear
         {
             try
             {
+                aXAddHomegearError(message, (Int16)level);
                 Logging.WriteLog("[HomeGear-Error-Handler] (Level: " + level.ToString() + ") " + message, "", true);
             }
             catch (Exception ex)
