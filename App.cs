@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Threading;
 using AutomationX;
 using System.Security.Authentication;
+using System.Diagnostics;
 
 namespace StaKoTecHomeGear
 {
@@ -44,9 +45,14 @@ namespace StaKoTecHomeGear
         AXVariable _deviceStateColor = null;
         HomegearLib.RPC.RPCController _rpc = null;
         HomegearLib.Homegear _homegear = null;
+        Boolean _reloading = false;
 
+
+        Mutex _queueConfigToPushMutex = new Mutex();
         Queue<Dictionary<AXInstance, Dictionary<Device, List<Int32>>>> _queueConfigToPush = new Queue<Dictionary<AXInstance, Dictionary<Device, List<Int32>>>>();
         Dictionary<String, List<Int32>> _instancesConfigChannels = null;
+        Thread _pushConfigThread = null;
+        
         Instances _instances = null;
         Mutex _homegearDevicesMutex = new Mutex();
 
@@ -156,10 +162,23 @@ namespace StaKoTecHomeGear
                 HomeGearConnect();
 
                 UInt32 j = 0;
+                Stopwatch stopWatch = new Stopwatch();
+                Stopwatch stopWatchThreadTimer = new Stopwatch();
+                Double lastCycletime = 0;
+                Double cycletimerServiceMessages = 0;
+                Double cycletimerInterfaceCheck = 0;
                 while (!_disposing)
                 {
                     try
                     {
+                        stopWatchThreadTimer.Reset();
+                        stopWatchThreadTimer.Start();
+                        stopWatch.Reset();
+                        stopWatch.Start();
+
+                        cycletimerServiceMessages += lastCycletime;
+                        cycletimerInterfaceCheck += lastCycletime;
+
                         lifetick.Set(true);
                         aXcycleCounter.Set(cycleCounter);
                         cycleCounter++;
@@ -172,30 +191,15 @@ namespace StaKoTecHomeGear
                         }
 
                         //Zu übertragende Config-Parameter abarbeiten
-                        try
+                        //Logging.WriteLog(cycleCounter.ToString() + " start");
+                        if ((_queueConfigToPush.Count > 0) && (_pushConfigThread == null || !_pushConfigThread.IsAlive || _pushConfigThread.ThreadState == System.Threading.ThreadState.Aborted))
                         {
-                            if (_queueConfigToPush.Count > 0)  //Eigendlich while, aber dafür muss es in einem extra Thread laufen
-                            {
-                                foreach (KeyValuePair<AXInstance, Dictionary<Device, List<Int32>>> aktInstance in _queueConfigToPush.Dequeue())
-                                {
-                                    foreach (KeyValuePair<Device, List<Int32>> aktDevice in aktInstance.Value)
-                                    {
-                                        foreach (Int32 aktChannel in aktDevice.Value)
-                                        {
-                                            Logging.WriteLog("Pushe Config für Kanal " + aktChannel.ToString());
-                                            aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannel.ToString();
-                                            aktDevice.Key.Channels[aktChannel].Config.Put();
-                                        }
-                                    }
-                                    if (aktInstance.Key.VariableExists("ConfigValuesChanged"))
-                                        aktInstance.Key.Get("ConfigValuesChanged").Set(false);
-                                }
-                            }
+                            //Logging.WriteLog(cycleCounter.ToString() + " geht los");
+                            _pushConfigThread = new Thread(PushConfig);
+                            _pushConfigThread.Start();
+                            
                         }
-                        catch (Exception ex)
-                        {
-                            Logging.WriteLog(ex.Message, ex.StackTrace);
-                        }
+                        //Logging.WriteLog(cycleCounter.ToString() + " feddich");
 
                         if (!_rpc.IsConnected)
                         {
@@ -220,7 +224,11 @@ namespace StaKoTecHomeGear
                             if (connectionTimeout > 0)  //Wenn verbindung wieder hergestellt wurde, neu laden
                             {
                                 _homegearDevicesMutex.WaitOne();
-                                _homegear.Reload();
+                                if (!_reloading)
+                                {
+                                    _reloading = true;
+                                    _homegear.Reload();
+                                }
                                 _homegearDevicesMutex.ReleaseMutex();
                             }
                             connectionTimeout = 0;
@@ -231,9 +239,10 @@ namespace StaKoTecHomeGear
                         if (_initCompleted)
                             _instances.Lifetick();
 
-
-                        if (_homegear != null && _initCompleted && j % 10 == 0)
+                        
+                        if (_homegear != null && (_pushConfigThread == null || !_pushConfigThread.IsAlive) && _initCompleted && (cycletimerServiceMessages >= 10))
                         {
+                            cycletimerServiceMessages = 0;
                             Boolean serviceMessageVorhanden = false;
                             List<ServiceMessage> serviceMessages = _homegear.ServiceMessages;
                             Int16 alarmCounter = 0;
@@ -269,37 +278,88 @@ namespace StaKoTecHomeGear
                             _mainInstance.Get("WarningCounter").Set(warningCounter);
                         }
 
+                        //Logging.WriteLog("cycletimerInterfaceCheck: " + (cycletimerInterfaceCheck).ToString() + "s");
                         //Alle 60 Sekunden checken wie lange es her ist, dass die letzten Pakete Empfangen / gesendet wurden
                         Int32 currentTime = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-                        if (_homegear != null && _initCompleted && j % 60 == 0)
+                        if (_homegear != null && _initCompleted && (cycletimerInterfaceCheck >= 600))
                         {
+                            cycletimerInterfaceCheck = 0;
                             foreach(KeyValuePair<String, Interface> aktInterface in _rpc.ListInterfaces())
                             {
-                                Console.WriteLine("Interface " + aktInterface.Value.ID + ": LastPacketReceived: " + (currentTime - aktInterface.Value.LastPacketReceived).ToString() + "s ago");
-                                Console.WriteLine("Interface " + aktInterface.Value.ID + ": LastPacketSent: " + (currentTime - aktInterface.Value.LastPacketSent).ToString() + "s ago");
+                                Logging.WriteLog("Interface " + aktInterface.Value.ID + ": LastPacketReceived: " + (currentTime - aktInterface.Value.LastPacketReceived).ToString() + "s ago");
+                                Logging.WriteLog("Interface " + aktInterface.Value.ID + ": LastPacketSent: " + (currentTime - aktInterface.Value.LastPacketSent).ToString() + "s ago");
                             }
 
                             //Firmwareupgrades prüfen
-                            _homegearDevicesMutex.WaitOne();
+                            /*_homegearDevicesMutex.WaitOne();
                             _instances.MutexLocked = true;
                             foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
                             {
                                 deviceCheckFirmwareUpdates(aktInstance.Key);
                             }
                             _homegearDevicesMutex.ReleaseMutex();
-                            _instances.MutexLocked = false;
+                            _instances.MutexLocked = false;*/
                         }
-
+                        //Logging.WriteLog("Cycle-Dauer: " + (lastCycletime).ToString() + "s");
                         j++;
                     }
                     catch (Exception ex)
                     {
                         Logging.WriteLog(ex.Message, ex.StackTrace);
                     }
-                    Thread.Sleep(1000);
+
+                    stopWatchThreadTimer.Stop();
+                    TimeSpan elapsedTotalThreadTimer = stopWatchThreadTimer.Elapsed;
+                    Int32 sleep = 100 - (Int32)elapsedTotalThreadTimer.TotalMilliseconds;
+                    if (sleep < 0)
+                        sleep = 0;
+                    Thread.Sleep(sleep);
+
+                    stopWatch.Stop();
+                    TimeSpan elapsedTotal = stopWatch.Elapsed;
+                    lastCycletime = (elapsedTotal.TotalMilliseconds / 1000);
+                    //Logging.WriteLog("Last Cycletime: " + lastCycletime.ToString());
                 }
             }
             catch(Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+        }
+
+        Double getUnixTime()
+        {
+            Double currentTime = (DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
+            return currentTime;
+        }
+        
+
+        void PushConfig()
+        {
+            try
+            {
+                while (_queueConfigToPush.Count > 0) 
+                {
+                    _queueConfigToPushMutex.WaitOne();
+                    Dictionary<AXInstance, Dictionary<Device, List<Int32>>> aktQueue = _queueConfigToPush.Dequeue();
+                    _queueConfigToPushMutex.ReleaseMutex();
+                    foreach (KeyValuePair<AXInstance, Dictionary<Device, List<Int32>>> aktInstance in aktQueue)
+                    {
+                        foreach (KeyValuePair<Device, List<Int32>> aktDevice in aktInstance.Value)
+                        {
+                            foreach (Int32 aktChannel in aktDevice.Value)
+                            {
+                                Logging.WriteLog("Pushe Config für Kanal " + aktChannel.ToString());
+                                aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannel.ToString();
+                                aktDevice.Key.Channels[aktChannel].Config.Put();
+                            }
+                        }
+                        if (aktInstance.Key.VariableExists("ConfigValuesChanged"))
+                            aktInstance.Key.Get("ConfigValuesChanged").Set(false);
+                   }
+                }
+            }
+            catch (Exception ex)
             {
                 Logging.WriteLog(ex.Message, ex.StackTrace);
             }
@@ -844,6 +904,9 @@ namespace StaKoTecHomeGear
                                     }
                                 }
                                 aktInstanz.Get("ConfigValuesChanged").Set(false);
+                                _instances.Lifetick();
+                                _mainInstance.Get("Lifetick").Set(true);
+                                Thread.Sleep(1);
                             }
                             else  //if (classnames[devicePair.Key] == devicePair.Value.TypeString)
                             {
@@ -1025,7 +1088,9 @@ namespace StaKoTecHomeGear
                             }
                             Dictionary<AXInstance, Dictionary<Device, List<Int32>>> queueAdd = new Dictionary<AXInstance, Dictionary<Device, List<Int32>>>();
                             queueAdd.Add(sender.Instance, configToPush);
+                            _queueConfigToPushMutex.WaitOne();
                             _queueConfigToPush.Enqueue(queueAdd);
+                            _queueConfigToPushMutex.ReleaseMutex();
                             _instancesConfigChannels.Remove(sender.Instance.Name);
                         }
                         if (sender.Instance.VariableExists("ConfigValuesChanged"))
@@ -1224,6 +1289,7 @@ namespace StaKoTecHomeGear
 
         void _homegear_Reloaded(Homegear sender)
         {
+            _reloading = false;
             try
             {
                 _mainInstance.Status = "RPC: Reload feddich";
@@ -1307,8 +1373,14 @@ namespace StaKoTecHomeGear
                     try
                     {
                         _mainInstance.Get("RPC_InitComplete").Set(false);
+                        while (_reloading)
+                        {
+                            Logging.WriteLog("Wait for homegear.Reload()");
+                            Thread.Sleep(10);
+                        }
                         Logging.WriteLog("Homegear is full-reloading");
                         _homegearDevicesMutex.WaitOne();
+                        _reloading = true;
                         _homegear.Reload();
                         _homegearDevicesMutex.ReleaseMutex();
                     }
@@ -1558,6 +1630,11 @@ namespace StaKoTecHomeGear
             {
                 Logging.WriteLog("Eingehende Verbindung von Homegear hergestellt");
                 _mainInstance.Get("err").Set(false);
+                if (!_reloading && !_mainInstance.Get("RPC_InitComplete").GetBool())
+                {
+                    _reloading = true;
+                    _homegear.Reload();
+                }
             }
             catch (Exception ex)
             {
