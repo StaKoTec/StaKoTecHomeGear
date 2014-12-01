@@ -35,14 +35,13 @@ namespace StaKoTecHomeGear
 
         VariableConverter _varConverter = null;
 
+        AXVariable _homegearInterfaces = null;
         AXVariable _deviceID = null;
         AXVariable _deviceInstance = null;
         AXVariable _deviceRemark = null;
         AXVariable _deviceTypeString = null;
         AXVariable _deviceState = null;
         AXVariable _deviceStateColor = null;
-        AXVariable _homegearErrorState = null;
-        AXVariable _homegearErrors = null;
         HomegearLib.RPC.RPCController _rpc = null;
         HomegearLib.Homegear _homegear = null;
 
@@ -124,15 +123,14 @@ namespace StaKoTecHomeGear
                 for (x = 0; x < homegearErrorQuit.Length; x++)
                     homegearErrorQuit.Set(x, false);
                 homegearErrorQuit.ArrayValueChanged += homegearErrorQuit_ArrayValueChanged;
-                _homegearErrorState = _mainInstance.Get("HomegearErrorState");
+                AXVariable homegearErrorState = _mainInstance.Get("HomegearErrorState");
                 Int16 errorCount = 0;
-                for (x = 0; x < _homegearErrorState.Length; x++)
+                for (x = 0; x < homegearErrorState.Length; x++)
                 {
-                    if (_homegearErrorState.GetLongInteger(x) > 0)
+                    if (homegearErrorState.GetLongInteger(x) > 0)
                         errorCount++;
                 }
                 _mainInstance.Get("HomegearError").Set((errorCount > 0));
-                _homegearErrors = _mainInstance.Get("HomegearErrors"); 
 
 
                 Int32 axStartID = _mainInstance.Get("StartID").GetInteger();
@@ -258,7 +256,8 @@ namespace StaKoTecHomeGear
                                     aktMessage += " (" + _homegear.Devices[message.PeerID].TypeString + ")";
                                 }
                                 aktMessage += " " + "Channel: " + message.Channel.ToString() + " " + message.Type + " = " + message.Value.ToString();
-                                aX_serviceMessages.Set(x, aktMessage);
+                                if (x < aX_serviceMessages.Length)
+                                    aX_serviceMessages.Set(x, aktMessage);
                                 x++;
                                 serviceMessageVorhanden = true;
                             }
@@ -283,7 +282,10 @@ namespace StaKoTecHomeGear
                             //Firmwareupgrades prüfen
                             _homegearDevicesMutex.WaitOne();
                             _instances.MutexLocked = true;
-                            deviceCheckFirmwareUpdates();
+                            foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
+                            {
+                                deviceCheckFirmwareUpdates(aktInstance.Key);
+                            }
                             _homegearDevicesMutex.ReleaseMutex();
                             _instances.MutexLocked = false;
                         }
@@ -303,28 +305,30 @@ namespace StaKoTecHomeGear
             }
         }
 
-        void deviceCheckFirmwareUpdates()
+        String deviceCheckFirmwareUpdates(Int32 deviceID)
         {
-            foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
+            String firmware = "";
+            if ((_homegear.Devices.ContainsKey(deviceID)) && (_instances.ContainsKey(deviceID)))
             {
-                if (_homegear.Devices.ContainsKey(aktInstance.Key))
-                {
-                    Device aktDevice = _homegear.Devices[aktInstance.Key];
+                Device aktDevice = _homegear.Devices[deviceID];
+                AXInstance aktInstance = _instances[deviceID];
 
-                    if (aktInstance.Value.VariableExists("AktuelleFirmware"))
-                        aktInstance.Value.Get("AktuelleFirmware").Set(aktDevice.Firmware + " (" + aktDevice.AvailableFirmware + ")");
-                    if ((aktDevice.AvailableFirmware != "") && (aktDevice.Firmware != aktDevice.AvailableFirmware))
-                    {
-                        if (aktInstance.Value.VariableExists("FirmwareupdateVorhanden"))
-                            aktInstance.Value.Get("FirmwareupdateVorhanden").Set(true);
-                    }
-                    else
-                    {
-                        if (aktInstance.Value.VariableExists("FirmwareupdateVorhanden"))
-                            aktInstance.Value.Get("FirmwareupdateVorhanden").Set(false);
-                    }
+                if (aktInstance.VariableExists("AktuelleFirmware"))
+                    aktInstance.Get("AktuelleFirmware").Set(aktDevice.Firmware + " (" + aktDevice.AvailableFirmware + ")");
+                if ((aktDevice.AvailableFirmware != "") && (aktDevice.Firmware != aktDevice.AvailableFirmware))
+                {
+                    firmware = aktDevice.Firmware + "/" + aktDevice.AvailableFirmware;
+                    if (aktInstance.VariableExists("FirmwareupdateVorhanden"))
+                        aktInstance.Get("FirmwareupdateVorhanden").Set(true);
+                }
+                else
+                {
+                    firmware = aktDevice.Firmware;
+                    if (aktInstance.VariableExists("FirmwareupdateVorhanden"))
+                        aktInstance.Get("FirmwareupdateVorhanden").Set(false);
                 }
             }
+            return firmware;
         }
 
         void homegearErrorQuit_ArrayValueChanged(AXVariable sender, ushort index)
@@ -338,33 +342,44 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                //Logging.WriteLog("RemoveHomegearError index " + index.ToString());
-                List<String> homegearErrorsTemp = new List<String>();
-                List<Int32> homegearErrorStateTemp = new List<Int32>();                
+                //Logging.WriteLog("RemoveHomegearError index " + index.ToString());             
                 UInt16 x = 0;
+                UInt16 i = 0;
                 Int16 errorCount = 0;
-                for (x = 0, index = 0; x < _homegearErrors.Length; x++)
+                Dictionary<UInt16, Dictionary<String, Int32>> dictHomegearErrors = new Dictionary<UInt16, Dictionary<String, Int32>>();
+                AXVariable homegearErrorState = _mainInstance.Get("HomegearErrorState");
+                AXVariable homegearErrors = _mainInstance.Get("HomegearErrors");
+                for (x = 0, i = 0; x < homegearErrors.Length; x++)
                 {
                     if (x != index)
                     {
-                        homegearErrorsTemp.Add(_homegearErrors.GetString(x));
-                        homegearErrorStateTemp.Add(_homegearErrorState.GetLongInteger(x));
-                        if (_homegearErrorState.GetLongInteger(x) > 0)
-                            errorCount++;
+                        //Logging.WriteLog("Read Index " + x.ToString() + " " + homegearErrors.GetString(x));
+                        Dictionary<String, Int32> aktEintrag = new Dictionary<String, Int32>();
+                        aktEintrag.Add(homegearErrors.GetString(x), homegearErrorState.GetLongInteger(x));
+                        dictHomegearErrors.Add(i, aktEintrag);
+                        i++;
+                    }
+                    //else
+                      //  Logging.WriteLog("Skip Read Index " + x.ToString() + " " + homegearErrors.GetString(x));
+                }
+                for (; i < x; i++ )
+                {
+                    //Logging.WriteLog("Read Frei Index " + i.ToString());
+                    Dictionary<String, Int32> aktEintrag = new Dictionary<String, Int32>();
+                    aktEintrag.Add("", 0);
+                    dictHomegearErrors.Add(i, aktEintrag);
+                }
+
+                foreach (KeyValuePair<UInt16, Dictionary<String, Int32>> aktZeile in dictHomegearErrors)
+                {
+                    foreach (KeyValuePair<String, Int32> aktError in aktZeile.Value)
+                    {
+                        //Logging.WriteLog("Write Index " + aktZeile.Key.ToString() + " " + aktError.Key);
+                        homegearErrors.Set(aktZeile.Key, aktError.Key);
+                        homegearErrorState.Set(aktZeile.Key, aktError.Value);
                     }
                 }
-                
-                for (x = (UInt16)homegearErrorsTemp.Count; x < _homegearErrors.Length; x++)
-                {
-                    homegearErrorsTemp.Add("");
-                    homegearErrorStateTemp.Add(0);
-                }
-                 
-                for (x = 0; x < _homegearErrors.Length; x++)
-                {
-                    _homegearErrors.Set(x, homegearErrorsTemp[x]);
-                    _homegearErrorState.Set(x, homegearErrorStateTemp[x]);
-                }
+
 
                 _mainInstance.Get("HomegearError").Set((errorCount > 0));
             }
@@ -380,19 +395,21 @@ namespace StaKoTecHomeGear
             {
                 List<String> homegearErrorsTemp = new List<String>();
                 List<Int32> homegearErrorStateTemp = new List<Int32>();
+                AXVariable homegearErrorState = _mainInstance.Get("HomegearErrorState");
+                AXVariable homegearErrors = _mainInstance.Get("HomegearErrors");
                 UInt16 x = 0;
 
                 homegearErrorsTemp.Add(DateTime.Now.Hour.ToString("D2") + ":" + DateTime.Now.Minute.ToString("D2") + ":" + DateTime.Now.Second.ToString("D2") + ": " + message);
                 homegearErrorStateTemp.Add(level);
-                for (x = 0; x < _homegearErrors.Length; x++)
+                for (x = 0; x < homegearErrors.Length; x++)
                 {
-                    homegearErrorsTemp.Add(_homegearErrors.GetString(x));
-                    homegearErrorStateTemp.Add(_homegearErrorState.GetLongInteger(x));
+                    homegearErrorsTemp.Add(homegearErrors.GetString(x));
+                    homegearErrorStateTemp.Add(homegearErrorState.GetLongInteger(x));
                 }
-                for (x = 0; x < _homegearErrors.Length; x++)
+                for (x = 0; x < homegearErrors.Length; x++)
                 {
-                    _homegearErrors.Set(x, homegearErrorsTemp[x]);
-                    _homegearErrorState.Set(x, homegearErrorStateTemp[x]);
+                    homegearErrors.Set(x, homegearErrorsTemp[x]);
+                    homegearErrorState.Set(x, homegearErrorStateTemp[x]);
                 }
                 _mainInstance.Get("HomegearError").Set(true);
             }
@@ -703,6 +720,19 @@ namespace StaKoTecHomeGear
             return className;
         }
 
+        void getInterfaces()
+        {
+            UInt16 x = 0;
+            foreach(KeyValuePair<String, Interface> aktInterface in _homegear.Interfaces)
+            {
+                if (x < _homegearInterfaces.Length)
+                    _homegearInterfaces.Set(x, aktInterface.Value.ID);
+                x++;
+            }
+            for(; x < _homegearInterfaces.Length; x++)
+                _homegearInterfaces.Set(x, "");
+        }
+
         void init_ValueChanged(AXVariable sender)
         {
             try
@@ -717,6 +747,7 @@ namespace StaKoTecHomeGear
                 _mainInstance.Status = "Init";
                 Logging.WriteLog("Init Devices");
 
+                _homegearInterfaces = sender.Instance.Get("HomegearInterfaces");
                 _deviceID = sender.Instance.Get("DeviceID");
                 _deviceInstance = sender.Instance.Get("DeviceInstance");
                 _deviceRemark = sender.Instance.Get("DeviceRemark");
@@ -725,6 +756,7 @@ namespace StaKoTecHomeGear
                 _deviceStateColor = sender.Instance.Get("DeviceStateColor");
 
                 _mainInstance.Get("HomeGearVersion").Set(_homegear.Version);
+                getInterfaces();
 
                 _instances.Reload(_homegear.Devices);
                 _instances.MutexLocked = true;
@@ -733,6 +765,9 @@ namespace StaKoTecHomeGear
                     x = 0;
                     foreach (KeyValuePair<Int32, Device> devicePair in _homegear.Devices)
                     {
+                        if (devicePair.Key > 1000000000)  //Teams nicht anzeigen
+                            continue;
+
                         _deviceID.Set(x, devicePair.Key);
                         if (_instances.ContainsKey(devicePair.Key))
                         {
@@ -748,11 +783,16 @@ namespace StaKoTecHomeGear
                                 else
                                     _deviceRemark.Set(x, "");
 
-                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] : "OK");
+                                String firmware = " (FW: " + deviceCheckFirmwareUpdates(devicePair.Key) + ")";
+
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] + firmware : "OK" + firmware);
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
-                                aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
+                                if (aktInstanz.VariableExists("SerialNo"))
+                                    aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
                                 if (aktInstanz.VariableExists("Name"))
                                     aktInstanz.Get("Name").Set(devicePair.Value.Name);
+                                if (aktInstanz.VariableExists("InterfaceID"))
+                                    aktInstanz.Get("InterfaceID").Set(devicePair.Value.Interface.ID);
 
                                 //Aktuelle Config- und Statuswerte Werte auslesen
                                 Device aktDevice = devicePair.Value;
@@ -960,7 +1000,11 @@ namespace StaKoTecHomeGear
                     String type;
                     Int32 channelIndex;
 
-                    if (sender.Name == "SetConfigValues")
+                    if (sender.Name == "InterfaceID")
+                    {
+                        aktDevice.Interface.ID = sender.GetString();
+                    }
+                    else if (sender.Name == "SetConfigValues")
                     {
                         if (!sender.GetBool())
                         {
