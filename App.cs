@@ -93,7 +93,7 @@ namespace StaKoTecHomeGear
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
 
                 _mainInstance = new AXInstance(_aX, instanceName, "Status", "err"); //Instanz-Objekt erstellen
-                _mainInstance.PollingInterval = 1000;
+                _mainInstance.PollingInterval = 200;
                 _mainInstance.SetVariableEvents(true);
                 Logging.Init(_aX, _mainInstance);
                 _varConverter = new VariableConverter(_mainInstance);
