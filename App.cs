@@ -42,6 +42,8 @@ namespace StaKoTecHomeGear
         AXVariable _deviceRemark = null;
         AXVariable _deviceTypeString = null;
         AXVariable _deviceState = null;
+        AXVariable _deviceFirmware = null;
+        AXVariable _deviceInterface = null;
         AXVariable _deviceStateColor = null;
         HomegearLib.RPC.RPCController _rpc = null;
         HomegearLib.Homegear _homegear = null;
@@ -50,6 +52,7 @@ namespace StaKoTecHomeGear
 
         Mutex _queueConfigToPushMutex = new Mutex();
         Queue<Dictionary<AXInstance, Dictionary<Device, List<Int32>>>> _queueConfigToPush = new Queue<Dictionary<AXInstance, Dictionary<Device, List<Int32>>>>();
+        Dictionary<AXInstance, Dictionary<Device, List<Int32>>> _aktQueue = null;
         Dictionary<String, List<Int32>> _instancesConfigChannels = null;
         Thread _pushConfigThread = null;
         
@@ -118,6 +121,9 @@ namespace StaKoTecHomeGear
                 AXVariable deviceRemove = _mainInstance.Get("DeviceRemove");
                 deviceRemove.Set(false);
                 deviceRemove.ValueChanged += deviceRemove_ValueChanged;
+                AXVariable changeInterface = _mainInstance.Get("ChangeInterface");
+                changeInterface.Set(false);
+                changeInterface.ValueChanged += changeInterface_ValueChanged;
                 AXVariable getDeviceVars = _mainInstance.Get("GetDeviceVars");
                 getDeviceVars.Set(false);
                 getDeviceVars.ValueChanged += getDeviceVars_ValueChanged;
@@ -192,7 +198,7 @@ namespace StaKoTecHomeGear
 
                         //Zu übertragende Config-Parameter abarbeiten
                         //Logging.WriteLog(cycleCounter.ToString() + " start");
-                        if ((_queueConfigToPush.Count > 0) && (_pushConfigThread == null || !_pushConfigThread.IsAlive || _pushConfigThread.ThreadState == System.Threading.ThreadState.Aborted))
+                        if ((_queueConfigToPush.Count > 0) && _initCompleted && (_pushConfigThread == null || !_pushConfigThread.IsAlive || _pushConfigThread.ThreadState == System.Threading.ThreadState.Aborted))
                         {
                             //Logging.WriteLog(cycleCounter.ToString() + " geht los");
                             _pushConfigThread = new Thread(PushConfig);
@@ -327,6 +333,35 @@ namespace StaKoTecHomeGear
             }
         }
 
+        void changeInterface_ValueChanged(AXVariable sender)
+        {
+            try
+            {
+                Int32 deviceID = _mainInstance.Get("ChangeInterfaceDeviceID").GetLongInteger();
+                String deviceInterface = _mainInstance.Get("ChangeInterfaceName").GetString();
+
+                Logging.WriteLog("Change interface from DeciveID " + deviceID.ToString() + " to: " + deviceInterface);
+                _homegearDevicesMutex.WaitOne();
+                if (_homegear.Devices.ContainsKey(deviceID))
+                {
+                    Dictionary<String, Interface> rpcInterfaces = _rpc.ListInterfaces();
+                    foreach (KeyValuePair<String, Interface> aktInterface in rpcInterfaces)
+                    {
+                        if (aktInterface.Key == deviceInterface)
+                            _rpc.SetInterface(deviceID, aktInterface.Value);
+                    }
+                }
+                _homegearDevicesMutex.ReleaseMutex();
+                sender.Set(false);
+                _homegear.Reload();
+                Logging.WriteLog("Change interface ready");
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+        }
+
         Double getUnixTime()
         {
             Double currentTime = (DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
@@ -338,12 +373,13 @@ namespace StaKoTecHomeGear
         {
             try
             {
+                Logging.WriteLog("Pushing Config-Thread gestartet");
                 while (_queueConfigToPush.Count > 0) 
                 {
                     _queueConfigToPushMutex.WaitOne();
-                    Dictionary<AXInstance, Dictionary<Device, List<Int32>>> aktQueue = _queueConfigToPush.Dequeue();
+                    _aktQueue = _queueConfigToPush.Dequeue();
                     _queueConfigToPushMutex.ReleaseMutex();
-                    foreach (KeyValuePair<AXInstance, Dictionary<Device, List<Int32>>> aktInstance in aktQueue)
+                    foreach (KeyValuePair<AXInstance, Dictionary<Device, List<Int32>>> aktInstance in _aktQueue)
                     {
                         foreach (KeyValuePair<Device, List<Int32>> aktDevice in aktInstance.Value)
                         {
@@ -357,7 +393,18 @@ namespace StaKoTecHomeGear
                         if (aktInstance.Key.VariableExists("ConfigValuesChanged"))
                             aktInstance.Key.Get("ConfigValuesChanged").Set(false);
                    }
+                    _aktQueue = null;
                 }
+            }
+            catch(ThreadAbortException)
+            {
+                if (_aktQueue != null)
+                {
+                    _queueConfigToPushMutex.WaitOne();
+                    _queueConfigToPush.Enqueue(_aktQueue);
+                    _queueConfigToPushMutex.ReleaseMutex();
+                }
+                Logging.WriteLog("PushConfig Thread abgebrochen. Geht gleich weiter...");
             }
             catch (Exception ex)
             {
@@ -801,7 +848,10 @@ namespace StaKoTecHomeGear
                     return;
                 
                 _initCompleted = false;
-                _homegearDevicesMutex.WaitOne();
+                if (_pushConfigThread != null && _pushConfigThread.IsAlive)
+                    _pushConfigThread.Abort();
+                
+                
 
                 UInt16 x = 0;
                 _mainInstance.Status = "Init";
@@ -813,15 +863,24 @@ namespace StaKoTecHomeGear
                 _deviceRemark = sender.Instance.Get("DeviceRemark");
                 _deviceTypeString = sender.Instance.Get("DeviceTypeString");
                 _deviceState = sender.Instance.Get("DeviceState");
+                _deviceFirmware = sender.Instance.Get("DeviceFirmware");
+                _deviceInterface = sender.Instance.Get("DeviceInterface");
                 _deviceStateColor = sender.Instance.Get("DeviceStateColor");
 
                 _mainInstance.Get("HomeGearVersion").Set(_homegear.Version);
                 getInterfaces();
 
+                _homegearDevicesMutex.WaitOne();
+                Logging.WriteLog("Reloading Instances");
                 _instances.Reload(_homegear.Devices);
                 _instances.MutexLocked = true;
                 try
                 {
+                    x = 0;
+                    //Erstmal alle ColorStates löschen, damit sichtbar wird welches Device bereite geparst wurde
+                    for (x = 0; x < _deviceStateColor.Length; x++ )
+                        _deviceStateColor.Set(x, (Int16)DeviceStatus.Nichts);
+
                     x = 0;
                     foreach (KeyValuePair<Int32, Device> devicePair in _homegear.Devices)
                     {
@@ -829,6 +888,8 @@ namespace StaKoTecHomeGear
                             continue;
 
                         _deviceID.Set(x, devicePair.Key);
+
+                        Logging.WriteLog("Parse DeviceID " + devicePair.Key.ToString());
                         if (_instances.ContainsKey(devicePair.Key))
                         {
                             AXInstance aktInstanz = _instances[devicePair.Key];
@@ -843,9 +904,10 @@ namespace StaKoTecHomeGear
                                 else
                                     _deviceRemark.Set(x, "");
 
-                                String firmware = " (FW: " + deviceCheckFirmwareUpdates(devicePair.Key) + ")";
+                                _deviceFirmware.Set(x, deviceCheckFirmwareUpdates(devicePair.Key));
+                                _deviceInterface.Set(x, devicePair.Value.Interface.ID);
 
-                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] + firmware : "OK" + firmware);
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] : "OK");
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
                                 if (aktInstanz.VariableExists("SerialNo"))
                                     aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
@@ -855,54 +917,8 @@ namespace StaKoTecHomeGear
                                     aktInstanz.Get("InterfaceID").Set(devicePair.Value.Interface.ID);
 
                                 //Aktuelle Config- und Statuswerte Werte auslesen
-                                Device aktDevice = devicePair.Value;
-                                foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
-                                {
-                                    foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
-                                    {
-                                        var aktVar = Wert.Value;
-                                        if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
-                                            continue;
-                                        String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
-                                        if (aktInstanz.VariableExists(aktVarName))
-                                        {
-                                            AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                                            if (aktAXVar != null)
-                                            {
-                                                _varConverter.SetAXVariable(aktAXVar, aktVar);
-                                                setDeviceStatusInMaininstance(aktVar, devicePair.Key);
-                                            }
-                                        }
-                                        String subinstance = "V" + aktChannel.Key.ToString("D2");
-                                        if (aktInstanz.SubinstanceExists(subinstance))
-                                        {
-                                            AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                                            if (aktAXVar2 != null)
-                                            {
-                                                _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                                                setDeviceStatusInMaininstance(aktVar, devicePair.Key);
-                                            }
-                                        }
-                                    }
+                                getActualDeviceData(devicePair.Value, aktInstanz);
 
-                                    foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
-                                    {
-                                        var aktVar = configName.Value;
-                                        String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
-                                        if (aktInstanz.VariableExists(aktVarName))
-                                        {
-                                            //Console.WriteLine("Setze " + aktInstanz.Name + "." + aktVarName);
-                                            AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                                            if (aktAXVar != null) _varConverter.SetAXVariable(aktAXVar, aktVar);
-                                        }
-                                        String subinstance = "C" + aktChannel.Key.ToString("D2");
-                                        if (aktInstanz.SubinstanceExists(subinstance))
-                                        {
-                                            AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                                            if (aktAXVar2 != null) _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                                        }
-                                    }
-                                }
                                 aktInstanz.Get("ConfigValuesChanged").Set(false);
                                 _instances.Lifetick();
                                 _mainInstance.Get("Lifetick").Set(true);
@@ -966,6 +982,62 @@ namespace StaKoTecHomeGear
                 catch (Exception ex)
                 {
                     Logging.WriteLog(ex.Message, ex.StackTrace);
+                }
+            }
+        }
+
+        void getActualDeviceData(Device aktDevice, AXInstance aktInstanz)
+        {
+            foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
+            {
+                foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
+                {
+                    var aktVar = Wert.Value;
+                    if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
+                        continue;
+                    String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
+                    if (aktInstanz.VariableExists(aktVarName))
+                    {
+                        AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                        if (aktAXVar != null)
+                        {
+                            _varConverter.SetAXVariable(aktAXVar, aktVar);
+                            setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                        }
+                    }
+                    String subinstance = "V" + aktChannel.Key.ToString("D2");
+                    if (aktInstanz.SubinstanceExists(subinstance))
+                    {
+                        AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                        if (aktAXVar2 != null)
+                        {
+                            _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                            setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                        }
+                    }
+                }
+                
+                foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
+                {
+                    var aktVar = configName.Value;
+                    String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
+                    if (aktInstanz.VariableExists(aktVarName))
+                    {
+                        AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                        if (aktAXVar != null)
+                        {
+                            _varConverter.SetAXVariable(aktAXVar, aktVar);
+                        }
+                    }
+                    String subinstance = "C" + aktChannel.Key.ToString("D2");
+                    if (aktInstanz.SubinstanceExists(subinstance))
+                    {
+                        AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                        if (aktAXVar2 != null)
+                        {
+                            _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                        }
+                    }
                 }
             }
         }
@@ -1065,7 +1137,7 @@ namespace StaKoTecHomeGear
 
                     if (sender.Name == "InterfaceID")
                     {
-                        aktDevice.Interface.ID = sender.GetString();
+                        //aktDevice.Interface.ID = sender.GetString();
                     }
                     else if (sender.Name == "SetConfigValues")
                     {

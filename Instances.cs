@@ -55,11 +55,14 @@ namespace StaKoTecHomeGear
             _mutex.WaitOne();
             try
             {
+                Logging.WriteLog("Lösche instanzen-handles");
                 Clear(false);
 
                 //////////////////////////////////////////////////////////////
                 // Alle Instanzen im aX nach ihrer ID abfragen und in Homegear.Devices suchen
+                Logging.WriteLog("Hole alle HomeGear-Klassen");
                 List<String> homegearClasses = getHomeGearClasses();
+                Logging.WriteLog("Ab geht die Party");
                 foreach (String aktHomegearClass in homegearClasses)
                 {
                     List<String> aXInstanceNames = _aX.GetInstanceNames(aktHomegearClass);
@@ -125,6 +128,7 @@ namespace StaKoTecHomeGear
                     {
                         Logging.WriteLog(ex.Message, ex.StackTrace);
                     }
+                    _mainInstance.Get("Lifetick").Set(true);
                 }
                 _polledVariablesCount = 0;
                 base.Clear();
