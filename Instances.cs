@@ -62,14 +62,39 @@ namespace StaKoTecHomeGear
                 // Alle Instanzen im aX nach ihrer ID abfragen und in Homegear.Devices suchen
                 Logging.WriteLog("Hole alle HomeGear-Klassen");
                 List<String> homegearClasses = getHomeGearClasses();
+                Dictionary<String, List<String>> homegearInstances = getHomeGearInstances(homegearClasses);
+                List<String> instancesToDispose = new List<String>();
                 Logging.WriteLog("Ab geht die Party");
-                foreach (String aktHomegearClass in homegearClasses)
+                _polledVariablesCount = 0;
+
+                foreach (KeyValuePair<String, List<String>> aktInstancePair in homegearInstances)
                 {
-                    List<String> aXInstanceNames = _aX.GetInstanceNames(aktHomegearClass);
-                    foreach (String aktaXInstanceName in aXInstanceNames)
+                    foreach (String aktaXInstanceName in aktInstancePair.Value)
                     {
-                        //Logging.WriteLog("Reloade Instanz " + aktaXInstanceName);
                         AXInstance testInstance = new AXInstance(_aX, aktaXInstanceName, "Status", "err");
+                        
+                        //Vorbereitung auf prüfung ob Instanz schon vorhanden ist. Dann kann auch das Clear(false) von oben raus
+                        Boolean instanceVorhanden = false;
+                        foreach(KeyValuePair<Int32, AXInstance> testPair in this)
+                        {
+                            //Logging.WriteLog("if  " + testPair.Value.Name + " == " + aktaXInstanceName);
+                            if (testPair.Value.Name == aktaXInstanceName)
+                            {
+                                instanceVorhanden = true;
+
+                                //Logging.WriteLog(aktaXInstanceName + " gibt's schon!...");
+                                _polledVariablesCount += testPair.Value.PolledVariablesCount;
+                                foreach (AXInstance testSubInstance in testPair.Value.Subinstances)
+                                    _polledVariablesCount += testSubInstance.PolledVariablesCount;
+
+                                break;
+                            }
+                        }
+                        if (instanceVorhanden)
+                            continue;
+
+                        //Logging.WriteLog(aktaXInstanceName + " ist neu. Hole handles...");
+
                         Int32 aktID = testInstance.Get("ID").GetLongInteger();
                         if ((aktID <= 0) || (!homegearDevices.ContainsKey(aktID)))  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1 
                         {
@@ -77,7 +102,7 @@ namespace StaKoTecHomeGear
                             continue;
                         }
                         Add(aktID, testInstance);
-                        if (aktHomegearClass != homegearDevices[aktID].TypeString)
+                        if (aktInstancePair.Key != homegearDevices[aktID].TypeString)
                             continue;
                         testInstance.SetVariableEvents(true);
                         testInstance.PollingInterval = 20;
@@ -227,6 +252,26 @@ namespace StaKoTecHomeGear
             }
 
             return homeGearClassNames;
+        }
+
+
+        protected Dictionary<String, List<String>> getHomeGearInstances(List<String> homegearClasses)
+        {
+            Dictionary<String, List<String>> homegearInstances = new Dictionary<String, List<String>>();
+            try
+            {
+                foreach (String aktHomegearClass in homegearClasses)
+                {
+                    List<String> aXInstanceNames = _aX.GetInstanceNames(aktHomegearClass);
+                    if (!homegearInstances.ContainsKey(aktHomegearClass))
+                        homegearInstances.Add(aktHomegearClass, aXInstanceNames);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(ex.Message, ex.StackTrace);
+            }
+            return (homegearInstances);
         }
     }
 }
