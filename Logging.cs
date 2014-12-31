@@ -22,7 +22,7 @@ namespace StaKoTecHomeGear
             String logPath = _mainInstance.Get("$$_working_part").GetString() + "\\Log_" + mainInstance.Name + "_" + DatumString + ".txt";
             _logWriter = new System.IO.StreamWriter(logPath, true, Encoding.UTF8, 1024);
             _logWriter.AutoFlush = true;
-            WriteLog("StaKoTecHomegear V 0.1.1 started");
+            WriteLog("StaKoTecHomegear V 0.1.2 started");
         }
 
         public static void WriteLog(String message, String stackTrace = "", Boolean setError = false)

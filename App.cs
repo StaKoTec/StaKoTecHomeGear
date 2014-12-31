@@ -1338,8 +1338,13 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                aXAddHomegearError(message, (Int16)level);
-                Logging.WriteLog("[HomeGear-Error-Handler] (Level: " + level.ToString() + ") " + message, "", true);
+                //Level: 
+                //1: critical,
+                //2: error,
+                //3: warning
+                if (level < 3)
+                    aXAddHomegearError(message, (Int16)level);
+                Logging.WriteLog("[HomeGear-Error-Handler] (Level: " + level.ToString() + ") " + message, "", (level < 3));
             }
             catch (Exception ex)
             {
