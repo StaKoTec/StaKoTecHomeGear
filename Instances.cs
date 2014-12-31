@@ -43,7 +43,7 @@ namespace StaKoTecHomeGear
                     }
                     catch (Exception ex)
                     {
-                        Logging.WriteLog("Couldn't set variable " + instance.Value.Name + " to true", ex.StackTrace);
+                        Logging.WriteLog(LogLevel.Error, "Couldn't set variable " + instance.Value.Name + " to true", ex.StackTrace);
                     }
                 }
             }
@@ -55,16 +55,16 @@ namespace StaKoTecHomeGear
             _mutex.WaitOne();
             try
             {
-                Logging.WriteLog("Lösche instanzen-handles");
+                Logging.WriteLog(LogLevel.Debug, "Lösche instanzen-handles");
                 Clear(false);
 
                 //////////////////////////////////////////////////////////////
                 // Alle Instanzen im aX nach ihrer ID abfragen und in Homegear.Devices suchen
-                Logging.WriteLog("Hole alle HomeGear-Klassen");
+                Logging.WriteLog(LogLevel.Debug, "Hole alle HomeGear-Klassen");
                 List<String> homegearClasses = getHomeGearClasses();
                 Dictionary<String, List<String>> homegearInstances = getHomeGearInstances(homegearClasses);
                 List<String> instancesToDispose = new List<String>();
-                Logging.WriteLog("Ab geht die Party");
+                Logging.WriteLog(LogLevel.Debug, "Ab geht die Party");
                 _polledVariablesCount = 0;
 
                 foreach (KeyValuePair<String, List<String>> aktInstancePair in homegearInstances)
@@ -122,7 +122,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             _mutex.ReleaseMutex();
         }
@@ -151,7 +151,7 @@ namespace StaKoTecHomeGear
                     }
                     catch (Exception ex)
                     {
-                        Logging.WriteLog(ex.Message, ex.StackTrace);
+                        Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
                     }
                     _mainInstance.Get("Lifetick").Set(true);
                 }
@@ -160,7 +160,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             if (lockMutex)
                 _mutex.ReleaseMutex();
@@ -190,7 +190,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             if (lockMutex) _mutex.ReleaseMutex();
         }
@@ -248,7 +248,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
 
             return homeGearClassNames;
@@ -269,7 +269,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             return (homegearInstances);
         }

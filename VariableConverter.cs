@@ -81,7 +81,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
 
@@ -147,7 +147,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
 
@@ -169,7 +169,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             return true;
         }
@@ -204,7 +204,7 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _mainInstance.Error = ex.Message;
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
 
         }
@@ -251,7 +251,7 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _mainInstance.Error = ex.Message;
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             return stringVar;
         }
@@ -282,7 +282,7 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _mainInstance.Error = ex.Message;
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             return stringVar;
         }
@@ -317,7 +317,7 @@ namespace StaKoTecHomeGear
             catch (Exception ex)
             {
                 _mainInstance.Error = ex.Message;
-                Logging.WriteLog(ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
     }
