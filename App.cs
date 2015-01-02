@@ -395,7 +395,7 @@ namespace StaKoTecHomeGear
                         {
                             foreach (Int32 aktChannel in aktDevice.Value)
                             {
-                                Logging.WriteLog(LogLevel.Info, "Pushe Config für Kanal " + aktChannel.ToString());
+                                Logging.WriteLog(LogLevel.Info, "[" + aktInstance.Key.Path + "] Pushe Config für Kanal " + aktChannel.ToString());
                                 aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannel.ToString();
                                 aktDevice.Key.Channels[aktChannel].Config.Put();
                             }
