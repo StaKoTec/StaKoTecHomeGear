@@ -402,6 +402,7 @@ namespace StaKoTecHomeGear
                         }
                         if (aktInstance.Key.VariableExists("ConfigValuesChanged"))
                             aktInstance.Key.Get("ConfigValuesChanged").Set(false);
+                        Thread.Sleep(1000);  //Sendepause zuwischen den Geräten falls dirverse Geräte gleichzeitig pushen wollen
                    }
                     _aktQueue = null;
                 }
