@@ -224,6 +224,7 @@ namespace StaKoTecHomeGear
                         {
                             _mainInstance.Get("RPC_InitComplete").Set(false);
                             _initCompleted = false;
+
                             _firstInitDevices.Clear();
 
                             if (connectionTimeout > 0)
@@ -938,7 +939,7 @@ namespace StaKoTecHomeGear
                                 //Aktuelle Config- und Statuswerte Werte auslesen
                                 if (!_firstInitDevices.Contains(devicePair.Key))
                                 {
-                                    Logging.WriteLog(LogLevel.Info, "getActualDeviceData for Device ID " + devicePair.Key.ToString());
+                                    Logging.WriteLog(LogLevel.Debug, "getActualDeviceData for Device ID " + devicePair.Key.ToString());
                                     getActualDeviceData(devicePair.Value, aktInstanz);
                                     _firstInitDevices.Add(devicePair.Key);
                                 }
@@ -1591,6 +1592,7 @@ namespace StaKoTecHomeGear
                 {
                     AXInstance instanz = _instances[deviceID];
                     String varName = variable.Name + "_V" + channel.Index.ToString("D2");
+                    String subinstance = "V" + channel.Index.ToString("D2");
                     if (instanz.VariableExists(varName))
                     {
                         AXVariable aktAXVar = instanz.Get(varName);
@@ -1600,9 +1602,9 @@ namespace StaKoTecHomeGear
                             setDeviceStatusInMaininstance(variable, deviceID);
                             Logging.WriteLog(LogLevel.Debug, "[HomeGear -> aX]: " + aktAXVar.Path + " = " + variable.ToString());
                         }
+                        SetLastChange(instanz, varName + " = " + variable.ToString());
                     }
-                    String subinstance = "V" + channel.Index.ToString("D2");
-                    if (instanz.SubinstanceExists(subinstance))
+                    else if (instanz.SubinstanceExists(subinstance))
                     {
                         AXVariable aktAXVar2 = instanz.GetSubinstance(subinstance).Get(variable.Name);
                         if (aktAXVar2 != null)
@@ -1611,9 +1613,10 @@ namespace StaKoTecHomeGear
                             setDeviceStatusInMaininstance(variable, deviceID);
                             Logging.WriteLog(LogLevel.Debug, "[HomeGear -> aX]: " + aktAXVar2.Path + " = " + variable.ToString());
                         }
+                        SetLastChange(instanz, subinstance + "." + variable.Name + " = " + variable.ToString());
                     }
-
-                    SetLastChange(instanz, varName + " = " + variable.ToString());
+                    else
+                        SetLastChange(instanz, varName + " = " + variable.ToString() + " - Variable nicht vorhanden!");
                     
                     //Console.WriteLine(device.SerialNumber + ": " + variable.Name + ": " + variable.ToString());
                 }

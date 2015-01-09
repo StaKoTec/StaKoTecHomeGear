@@ -74,11 +74,12 @@ namespace StaKoTecHomeGear
                         AXInstance testInstance = new AXInstance(_aX, aktaXInstanceName, "Status", "err");
                         
                         //Vorbereitung auf prüfung ob Instanz schon vorhanden ist. Dann kann auch das Clear(false) von oben raus
-                        Boolean instanceVorhanden = false;
+                        /*
+                         * Boolean instanceVorhanden = false;
                         foreach(KeyValuePair<Int32, AXInstance> testPair in this)
                         {
                             //Logging.WriteLog("if  " + testPair.Value.Name + " == " + aktaXInstanceName);
-                            if (testPair.Value.Name == aktaXInstanceName)
+                            if (testPair.Value.Name == testInstance.Name)
                             {
                                 instanceVorhanden = true;
 
@@ -91,8 +92,10 @@ namespace StaKoTecHomeGear
                             }
                         }
                         if (instanceVorhanden)
+                        {
+                            testInstance.Dispose();
                             continue;
-
+                        }*/
                         //Logging.WriteLog(aktaXInstanceName + " ist neu. Hole handles...");
 
                         Int32 aktID = testInstance.Get("ID").GetLongInteger();
