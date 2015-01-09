@@ -39,6 +39,8 @@ namespace StaKoTecHomeGear
         List<String> _errorStates = null;
         List<String> _warningStates = null;
 
+        List<Int32> _firstInitDevices = null;
+
         bool _disposing = false;
         bool _initCompleted = false;
         AX _aX = null;
@@ -101,7 +103,8 @@ namespace StaKoTecHomeGear
 
                 _warningStates = new List<String>();
                 _warningStates.Add("CONFIG_PENDING");
-             
+
+                _firstInitDevices = new List<Int32>();
 
                 _aX.ShuttingDown += aX_ShuttingDown;
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
@@ -221,6 +224,7 @@ namespace StaKoTecHomeGear
                         {
                             _mainInstance.Get("RPC_InitComplete").Set(false);
                             _initCompleted = false;
+                            _firstInitDevices.Clear();
 
                             if (connectionTimeout > 0)
                                 Logging.WriteLog(LogLevel.Info, "Waiting for RPC-Server connection... (" + (connectionTimeout * 5).ToString() + " s)");
@@ -741,6 +745,9 @@ namespace StaKoTecHomeGear
             {
                 Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
                 sender.Instance.Status = "Resetting Device ID " + deviceID.ToString();
+                if (_firstInitDevices.Contains(deviceID))
+                    _firstInitDevices.Remove(deviceID);
+
                 _homegearDevicesMutex.WaitOne();
 
                 _rpc.DeleteDevice(deviceID, RPCDeleteDeviceFlags.Reset | RPCDeleteDeviceFlags.Defer);
@@ -764,6 +771,9 @@ namespace StaKoTecHomeGear
             {
                 Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
                 sender.Instance.Status = "Unpairing Device ID " + deviceID.ToString();
+                if (_firstInitDevices.Contains(deviceID))
+                    _firstInitDevices.Remove(deviceID);
+
                 _homegearDevicesMutex.WaitOne();
 
                 _rpc.DeleteDevice(deviceID, RPCDeleteDeviceFlags.Defer);
@@ -926,7 +936,12 @@ namespace StaKoTecHomeGear
                                     aktInstanz.Get("InterfaceID").Set(devicePair.Value.Interface.ID);
 
                                 //Aktuelle Config- und Statuswerte Werte auslesen
-                                getActualDeviceData(devicePair.Value, aktInstanz);
+                                if (!_firstInitDevices.Contains(devicePair.Key))
+                                {
+                                    Logging.WriteLog(LogLevel.Info, "getActualDeviceData for Device ID " + devicePair.Key.ToString());
+                                    getActualDeviceData(devicePair.Value, aktInstanz);
+                                    _firstInitDevices.Add(devicePair.Key);
+                                }
 
                                 aktInstanz.Get("ConfigValuesChanged").Set(false);
                                 _instances.Lifetick();
