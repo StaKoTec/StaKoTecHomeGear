@@ -1543,7 +1543,7 @@ namespace StaKoTecHomeGear
 
         void setDeviceStatusInMaininstance(Variable variable, Int32 id)
         {
-            if ( (variable.Type != VariableType.tBoolean) || (!_errorStates.Contains(variable.Name) && !_warningStates.Contains(variable.Name)) )
+            if (!_errorStates.Contains(variable.Name) && !_warningStates.Contains(variable.Name))
                 return;
 
             for (UInt16 x = 0; x < _deviceID.Length; x++)
