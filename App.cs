@@ -925,7 +925,8 @@ namespace StaKoTecHomeGear
                                     _deviceRemark.Set(x, "");
 
                                 _deviceFirmware.Set(x, deviceCheckFirmwareUpdates(devicePair.Key));
-                                _deviceInterface.Set(x, devicePair.Value.Interface.ID);
+                                try { _deviceInterface.Set(x, devicePair.Value.Interface.ID); }
+                                catch (Exception) { /* It's a virtual device - it has no interface */ }
 
                                 _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] : "OK");
                                 _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
