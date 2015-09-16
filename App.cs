@@ -595,6 +595,7 @@ namespace StaKoTecHomeGear
                 AXVariable deviceVars_Min = _mainInstance.Get("DeviceVars_Min");
                 AXVariable deviceVars_Max = _mainInstance.Get("DeviceVars_Max");
                 AXVariable deviceVars_Default = _mainInstance.Get("DeviceVars_Default");
+                AXVariable deviceVars_Actual = _mainInstance.Get("DeviceVars_Actual");
                 AXVariable deviceVars_RW = _mainInstance.Get("DeviceVars_RW");
                 AXVariable deviceVars_Unit = _mainInstance.Get("DeviceVars_Dimension");
                 AXVariable deviceVars_VarVorhanden = _mainInstance.Get("DeviceVars_VarVorhanden");
@@ -627,16 +628,19 @@ namespace StaKoTecHomeGear
                                 String maxVar = "";
                                 String typ = "";
                                 String defaultVar = "";
+                                String actualVar = "";
                                 String rwVar = "";
                                 String varOK = findVarInClass(deviceID, aktVar.Name, aktVar.Type, "C", aktChannel.Key.ToString("D2"));
 
                                 _varConverter.ParseDeviceConfigVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
 
+                                actualVar = _varConverter.HomegearVarToString(aktVar);
                                 deviceVars_Name.Set(x, aktVar.Name + "_C" + aktChannel.Key.ToString("D2"));
                                 deviceVars_Type.Set(x, typ);
                                 deviceVars_Min.Set(x, minVar);
                                 deviceVars_Max.Set(x, maxVar);
                                 deviceVars_Default.Set(x, defaultVar);
+                                deviceVars_Actual.Set(x, actualVar);
                                 deviceVars_RW.Set(x, rwVar);
                                 deviceVars_Unit.Set(x, aktVar.Unit);
                                 deviceVars_VarVorhanden.Set(x, varOK);
@@ -663,15 +667,18 @@ namespace StaKoTecHomeGear
                                 String maxVar = "";
                                 String typ = "";
                                 String defaultVar = "";
+                                String actualVar = "";
                                 String rwVar = "";
                                 String varOK = findVarInClass(deviceID, aktVar.Name, aktVar.Type, "V", aktChannel.Key.ToString("D2"));
                                 _varConverter.ParseDeviceVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
 
+                                actualVar = _varConverter.HomegearVarToString(aktVar);
                                 deviceVars_Name.Set(x, aktVar.Name + "_V" + aktChannel.Key.ToString("D2"));
                                 deviceVars_Type.Set(x, typ);
                                 deviceVars_Min.Set(x, minVar);
                                 deviceVars_Max.Set(x, maxVar);
                                 deviceVars_Default.Set(x, defaultVar);
+                                deviceVars_Actual.Set(x, actualVar);
                                 deviceVars_RW.Set(x, rwVar);
                                 deviceVars_Unit.Set(x, aktVar.Unit);
                                 deviceVars_VarVorhanden.Set(x, varOK);
@@ -687,6 +694,7 @@ namespace StaKoTecHomeGear
                         deviceVars_Min.Set(x, "");
                         deviceVars_Max.Set(x, "");
                         deviceVars_Default.Set(x, "");
+                        deviceVars_Actual.Set(x, "");
                         deviceVars_RW.Set(x, "");
                         deviceVars_Unit.Set(x, "");
                         deviceVars_VarVorhanden.Set(x, "");

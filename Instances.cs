@@ -63,7 +63,7 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(LogLevel.Debug, "Hole alle HomeGear-Klassen");
                 List<String> homegearClasses = getHomeGearClasses();
                 Dictionary<String, List<String>> homegearInstances = getHomeGearInstances(homegearClasses);
-                List<String> instancesToDispose = new List<String>();
+                List<AXInstance> instancesToDispose = new List<AXInstance>();
                 Logging.WriteLog(LogLevel.Debug, "Ab geht die Party");
                 _polledVariablesCount = 0;
 
@@ -72,7 +72,8 @@ namespace StaKoTecHomeGear
                     foreach (String aktaXInstanceName in aktInstancePair.Value)
                     {
                         AXInstance testInstance = new AXInstance(_aX, aktaXInstanceName, "Status", "err");
-                        
+
+                        Boolean instanceVorhanden = findInstance(aktaXInstanceName);
                         //Vorbereitung auf prüfung ob Instanz schon vorhanden ist. Dann kann auch das Clear(false) von oben raus
                         /*
                          * Boolean instanceVorhanden = false;
@@ -208,6 +209,20 @@ namespace StaKoTecHomeGear
         {
             if (SubinstanceVariableValueChanged != null)
                 SubinstanceVariableValueChanged(sender);
+        }
+
+
+        protected Boolean findInstance(String Instancename)
+        {
+            
+            foreach (KeyValuePair<Int32, AXInstance> testPair in this)
+            {
+                //Logging.WriteLog("if  " + testPair.Value.Name + " == " + aktaXInstanceName);
+                if (testPair.Value.Name == Instancename)
+                    return (true);
+            }
+
+            return (false);
         }
 
 
