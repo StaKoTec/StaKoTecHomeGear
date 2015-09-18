@@ -58,6 +58,10 @@ namespace StaKoTecHomeGear
         AXVariable _deviceFirmware = null;
         AXVariable _deviceInterface = null;
         AXVariable _deviceStateColor = null;
+
+        AXVariable _systemVariableName = null;
+        AXVariable _systemVariableValue = null;
+
         HomegearLib.RPC.RPCController _rpc = null;
         HomegearLib.Homegear _homegear = null;
         Boolean _reloading = false;
@@ -260,7 +264,7 @@ namespace StaKoTecHomeGear
                         if (_initCompleted)
                             _instances.Lifetick();
 
-                        
+
                         if (_homegear != null && (_pushConfigThread == null || !_pushConfigThread.IsAlive) && _initCompleted && (cycletimerServiceMessages >= 10))
                         {
                             cycletimerServiceMessages = 0;
@@ -879,8 +883,7 @@ namespace StaKoTecHomeGear
                 _initCompleted = false;
                 if (_pushConfigThread != null && _pushConfigThread.IsAlive)
                     _pushConfigThread.Abort();
-                
-                
+
 
                 UInt16 x = 0;
                 Logging.WriteLog(LogLevel.Info, "Init Devices");
@@ -894,6 +897,10 @@ namespace StaKoTecHomeGear
                 _deviceFirmware = sender.Instance.Get("DeviceFirmware");
                 _deviceInterface = sender.Instance.Get("DeviceInterface");
                 _deviceStateColor = sender.Instance.Get("DeviceStateColor");
+
+                _systemVariableName = sender.Instance.Get("SystemVariableName");
+                _systemVariableValue = sender.Instance.Get("SystemVariableValue");
+                UpdateSystemVariables();
 
                 _mainInstance.Get("HomeGearVersion").Set(_homegear.Version);
                 getInterfaces();
@@ -1315,6 +1322,24 @@ namespace StaKoTecHomeGear
             }
         }
 
+        private void UpdateSystemVariables()
+        {
+            UInt16 x = 0;
+            foreach (KeyValuePair<String, SystemVariable> aktSystemVar in _homegear.SystemVariables)
+            {
+                if (x > _systemVariableName.Length)
+                    break;
+                _systemVariableName.Set(x, aktSystemVar.Key);
+                _systemVariableValue.Set(x, aktSystemVar.Value.ToString());
+                x++;
+            }
+            for(; x < _systemVariableName.Length; x++)
+            {
+                _systemVariableName.Set(x, "");
+                _systemVariableValue.Set(x, "");
+            }
+        }
+
 
         private void HomeGearConnect()
         {
@@ -1680,6 +1705,7 @@ namespace StaKoTecHomeGear
             try
             {
                 Logging.WriteLog(LogLevel.Info, "RPC: System Variable '" + variable.Name + "' geändert");
+                UpdateSystemVariables();
             }
             catch (Exception ex)
             {
