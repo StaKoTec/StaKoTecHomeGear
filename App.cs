@@ -60,6 +60,7 @@ namespace StaKoTecHomeGear
         AXVariable _deviceStateColor = null;
 
         AXVariable _systemVariableName = null;
+        Dictionary<UInt16, String> _tempSystemvariableNames = new Dictionary<UInt16, String>();
         AXVariable _systemVariableValue = null;
 
         HomegearLib.RPC.RPCController _rpc = null;
@@ -72,9 +73,10 @@ namespace StaKoTecHomeGear
         Dictionary<AXInstance, Dictionary<Device, List<Int32>>> _aktQueue = null;
         Dictionary<String, List<Int32>> _instancesConfigChannels = null;
         Thread _pushConfigThread = null;
-        
+
         Instances _instances = null;
         Mutex _homegearDevicesMutex = new Mutex();
+        Mutex _homegearSystemVariablesMutex = new Mutex();
 
         public void Run(String instanceName)
         {
@@ -162,6 +164,10 @@ namespace StaKoTecHomeGear
                 }
                 _mainInstance.Get("HomegearError").Set((errorCount > 0));
 
+                _systemVariableName = _mainInstance.Get("SystemVariableName");
+                _systemVariableValue = _mainInstance.Get("SystemVariableValue");
+                _systemVariableName.ArrayValueChanged += _systemVariableName_ArrayValueChanged;
+                _systemVariableValue.ArrayValueChanged += _systemVariableValue_ArrayValueChanged;
 
                 Int32 axStartID = _mainInstance.Get("StartID").GetInteger();
                 Int32 axStartID_old = axStartID;
@@ -350,6 +356,57 @@ namespace StaKoTecHomeGear
             {
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
+        }
+
+        void _systemVariableName_ArrayValueChanged(AXVariable sender, ushort index)
+        {
+            try
+            {
+                _homegearSystemVariablesMutex.WaitOne();
+                if ((_systemVariableName.GetString(index).Trim() == "") && (_tempSystemvariableNames.ContainsKey(index)))
+                {
+                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _tempSystemvariableNames[index] + "' wurde von aX gelöscht");
+                    _rpc.DeleteSystemVariable(new SystemVariable(_tempSystemvariableNames[index], 0));
+                }
+                else if ((_systemVariableName.GetString(index).Trim() != "") && (!_tempSystemvariableNames.ContainsKey(index)))
+                {
+                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _systemVariableName.GetString(index).Trim() + "' wurde von aX erstellt");
+                    _rpc.SetSystemVariable(new SystemVariable(_systemVariableName.GetString(index).Trim(), 0));
+                }
+                else if ((_systemVariableName.GetString(index).Trim() != "") && (_tempSystemvariableNames.ContainsKey(index)))  //SystemVariable wurde umbenannt
+                {
+                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _tempSystemvariableNames[index] + "' wurde von aX umbenannt in '" + _systemVariableName.GetString(index).Trim() + "'");
+                    _rpc.SetSystemVariable(new SystemVariable(_systemVariableName.GetString(index).Trim(), _systemVariableValue.GetString(index)));
+                    _homegearSystemVariablesMutex.ReleaseMutex();
+                    Thread.Sleep(1000);
+                    _homegearSystemVariablesMutex.WaitOne();
+                    _rpc.DeleteSystemVariable(new SystemVariable(_tempSystemvariableNames[index], 0));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+            }
+            _homegearSystemVariablesMutex.ReleaseMutex();
+        }
+
+        void _systemVariableValue_ArrayValueChanged(AXVariable sender, ushort index)
+        {
+            try
+            {
+                _homegearSystemVariablesMutex.WaitOne();
+                
+                if (_systemVariableName.GetString(index).Trim() != "")
+                {
+                    Logging.WriteLog(LogLevel.Info, "Value of Systemvariable '" + _systemVariableName.GetString(index) + "' in aX has changed to " + sender.GetString(index));
+                    _rpc.SetSystemVariable(new SystemVariable(_systemVariableName.GetString(index), sender.GetString(index)));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+            }
+            _homegearSystemVariablesMutex.ReleaseMutex();
         }
 
         void changeInterface_ValueChanged(AXVariable sender)
@@ -898,8 +955,6 @@ namespace StaKoTecHomeGear
                 _deviceInterface = sender.Instance.Get("DeviceInterface");
                 _deviceStateColor = sender.Instance.Get("DeviceStateColor");
 
-                _systemVariableName = sender.Instance.Get("SystemVariableName");
-                _systemVariableValue = sender.Instance.Get("SystemVariableValue");
                 UpdateSystemVariables();
 
                 _mainInstance.Get("HomeGearVersion").Set(_homegear.Version);
@@ -1153,6 +1208,8 @@ namespace StaKoTecHomeGear
 
             if (instance.VariableExists("ConfigValuesChanged"))
                 instance.Get("ConfigValuesChanged").Set(true);
+
+            Logging.WriteLog(LogLevel.Debug, "Adding ConfigChannel " + channel.ToString() + " from Instance " + instancename);
         }
 
 
@@ -1325,18 +1382,29 @@ namespace StaKoTecHomeGear
         private void UpdateSystemVariables()
         {
             UInt16 x = 0;
-            foreach (KeyValuePair<String, SystemVariable> aktSystemVar in _homegear.SystemVariables)
+            _homegearSystemVariablesMutex.WaitOne();
+            _tempSystemvariableNames.Clear();
+            try
             {
-                if (x > _systemVariableName.Length)
-                    break;
-                _systemVariableName.Set(x, aktSystemVar.Key);
-                _systemVariableValue.Set(x, aktSystemVar.Value.ToString());
-                x++;
+                foreach (KeyValuePair<String, SystemVariable> aktSystemVar in _homegear.SystemVariables)
+                {
+                    if (x > _systemVariableName.Length)
+                        break;
+                    _systemVariableName.Set(x, aktSystemVar.Key);
+                    _systemVariableValue.Set(x, aktSystemVar.Value.ToString());
+                    _tempSystemvariableNames.Add(x, aktSystemVar.Key.ToString());
+                    x++;
+                }
+                for (; x < _systemVariableName.Length; x++)
+                {
+                    _systemVariableName.Set(x, "");
+                    _systemVariableValue.Set(x, "");
+                }
+                _homegearSystemVariablesMutex.ReleaseMutex();
             }
-            for(; x < _systemVariableName.Length; x++)
+            catch (Exception ex)
             {
-                _systemVariableName.Set(x, "");
-                _systemVariableValue.Set(x, "");
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
 
@@ -1527,7 +1595,10 @@ namespace StaKoTecHomeGear
                 else if (reloadType == ReloadType.SystemVariables)
                 {
                     Logging.WriteLog(LogLevel.Info, "Homegear is reloading SystemVariables");
+                    _homegearSystemVariablesMutex.WaitOne();
                     _homegear.SystemVariables.Reload();
+                    _homegearSystemVariablesMutex.ReleaseMutex();
+                    UpdateSystemVariables();
                 }
                 else if (reloadType == ReloadType.Events)
                 {
