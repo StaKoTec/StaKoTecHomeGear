@@ -102,8 +102,9 @@ namespace StaKoTecHomeGear
                     Console.WriteLine(ex.Message + "\r\n" + ex.StackTrace);
                     Dispose();
                 }
-                ////////////////////////////////////////////////////////////////////////////////////////////
-                // Status Texte laden
+                
+                
+                // {{{ Status Texte laden
                 _deviceStatusText = new Dictionary<DeviceStatus, String>();
                 _deviceStatusText.Add(DeviceStatus.Nichts, "");
                 _deviceStatusText.Add(DeviceStatus.OK, "OK");
@@ -120,6 +121,8 @@ namespace StaKoTecHomeGear
 
                 _warningStates = new List<String>();
                 _warningStates.Add("CONFIG_PENDING");
+                // }}}
+
 
                 _firstInitDevices = new List<Int32>();
 
