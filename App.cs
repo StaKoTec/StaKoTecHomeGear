@@ -95,6 +95,22 @@ namespace StaKoTecHomeGear
             {
                 try
                 {
+                    foreach (Process proc in Process.GetProcessesByName("StaKoTecHomeGear"))
+                    {
+                        if (proc.Id != Process.GetCurrentProcess().Id)
+                        {
+                            Console.WriteLine("Kille vorhergehende StaKoTecHomeGear.exe (Proc-ID: " + proc.Id.ToString() + ")");
+                            proc.Kill();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+
+                try
+                {
                     _aX = new AX();
                 }
                 catch (AXException ex)
@@ -1104,57 +1120,65 @@ namespace StaKoTecHomeGear
 
         void getActualDeviceData(Device aktDevice, AXInstance aktInstanz)
         {
-            foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
+            try
             {
-                foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
+                foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
                 {
-                    var aktVar = Wert.Value;
-                    if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
-                        continue;
-                    String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
-                    if (aktInstanz.VariableExists(aktVarName))
+                    foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
                     {
-                        AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                        if (aktAXVar != null)
+                        var aktVar = Wert.Value;
+                        if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
+                            continue;
+                        String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
+                        if (aktInstanz.VariableExists(aktVarName))
                         {
-                            _varConverter.SetAXVariable(aktAXVar, aktVar);
-                            setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                            AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                            if (aktAXVar != null)
+                            {
+                                _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                            }
+                        }
+                        String subinstance = "V" + aktChannel.Key.ToString("D2");
+                        if (aktInstanz.SubinstanceExists(subinstance))
+                        {
+                            AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                            if (aktAXVar2 != null)
+                            {
+                                _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                                setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                            }
                         }
                     }
-                    String subinstance = "V" + aktChannel.Key.ToString("D2");
-                    if (aktInstanz.SubinstanceExists(subinstance))
+
+                    foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
                     {
-                        AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                        if (aktAXVar2 != null)
+                        var aktVar = configName.Value;
+                        String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
+                        if (aktInstanz.VariableExists(aktVarName))
                         {
-                            _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                            setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                            AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                            if (aktAXVar != null)
+                            {
+                                _varConverter.SetAXVariable(aktAXVar, aktVar);
+                            }
+                        }
+                        String subinstance = "C" + aktChannel.Key.ToString("D2");
+                        if (aktInstanz.SubinstanceExists(subinstance))
+                        {
+                            AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                            if (aktAXVar2 != null)
+                            {
+                                _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                            }
                         }
                     }
                 }
-                
-                foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
-                {
-                    var aktVar = configName.Value;
-                    String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
-                    if (aktInstanz.VariableExists(aktVarName))
-                    {
-                        AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                        if (aktAXVar != null)
-                        {
-                            _varConverter.SetAXVariable(aktAXVar, aktVar);
-                        }
-                    }
-                    String subinstance = "C" + aktChannel.Key.ToString("D2");
-                    if (aktInstanz.SubinstanceExists(subinstance))
-                    {
-                        AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                        if (aktAXVar2 != null)
-                        {
-                            _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                        }
-                    }
-                }
+            }
+            catch (Exception ex)
+            {
+                _mainInstance.Error = ex.Message;
+                Logging.WriteLog(LogLevel.Info, ex.Message, ex.StackTrace);
             }
         }
 
