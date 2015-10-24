@@ -171,6 +171,9 @@ namespace StaKoTecHomeGear
                 AXVariable deviceRemove = _mainInstance.Get("DeviceRemove");
                 deviceRemove.Set(false);
                 deviceRemove.ValueChanged += deviceRemove_ValueChanged;
+                AXVariable deviceUpdate = _mainInstance.Get("DeviceUpdate");
+                deviceUpdate.Set(false);
+                deviceUpdate.ValueChanged += deviceUpdate_ValueChanged;
                 AXVariable changeInterface = _mainInstance.Get("ChangeInterface");
                 changeInterface.Set(false);
                 changeInterface.ValueChanged += changeInterface_ValueChanged;
@@ -218,6 +221,7 @@ namespace StaKoTecHomeGear
                 _deviceVars_Max = _mainInstance.Get("DeviceVars_Max");
                 _deviceVars_Default = _mainInstance.Get("DeviceVars_Default");
                 _deviceVars_Actual = _mainInstance.Get("DeviceVars_Actual");
+                _deviceVars_Actual.ArrayValueChanged += _deviceVars_Actual_ArrayValueChanged;
                 _deviceVars_RW = _mainInstance.Get("DeviceVars_RW");
                 _deviceVars_Unit = _mainInstance.Get("DeviceVars_Dimension");
                 _deviceVars_VarVorhanden = _mainInstance.Get("DeviceVars_VarVorhanden");
@@ -408,6 +412,131 @@ namespace StaKoTecHomeGear
             }
             catch(Exception ex)
             {
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+            }
+        }
+
+        void _deviceVars_Actual_ArrayValueChanged(AXVariable sender, ushort index)
+        {
+            try
+            {
+                Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
+                String variableName = _deviceVars_Name.GetString(index);
+                Logging.WriteLog(LogLevel.Info, "Variable " + variableName + " for Device ID " + deviceID.ToString() + " has changed");
+
+                String name = "";
+                Int32 channel = -1;
+                String type = "";
+                try
+                {
+                    if (variableName.Length >= 5)
+                    {
+                        name = variableName.Substring(0, (variableName.Length - 4));
+                        type = variableName.Substring((variableName.Length - 3), 1);
+                        Int32.TryParse(variableName.Substring((variableName.Length - 2), 2), out channel);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                }
+                Logging.WriteLog(LogLevel.Debug, "HomegearVariable " + name + " - Channel: " + channel.ToString() + "  - Type: " + type);
+                if (name.Length > 0)
+                {
+                    _homegearDevicesMutex.WaitOne();
+                    if (_homegear.Devices.ContainsKey(deviceID))
+                    {
+                        if (type == "V")
+                        {
+                            if (_homegear.Devices[deviceID].Channels.ContainsKey(channel) && _homegear.Devices[deviceID].Channels[channel].Variables.ContainsKey(name))
+                            {
+                                Variable aktVariable = _homegear.Devices[deviceID].Channels[channel].Variables[name];
+                                if (aktVariable.Writeable)
+                                {
+                                    Logging.WriteLog(LogLevel.Debug, "HomegearVariable: PeerID: " + aktVariable.PeerID + " - Name: " + aktVariable.Name + " - Channel: " + aktVariable.Channel.ToString() + " - Type: " + aktVariable.Type.ToString());
+                                    if ((aktVariable.Type == VariableType.tAction) || (aktVariable.Type == VariableType.tBoolean))
+                                    {
+                                        aktVariable.BooleanValue = (sender.GetString(index).ToLower() == "true") ? true : false;
+                                    }
+                                    else if (aktVariable.Type == VariableType.tDouble)
+                                    {
+                                        aktVariable.DoubleValue = Convert.ToDouble(sender.GetString(index));
+                                    }
+                                    else if ((aktVariable.Type == VariableType.tEnum) || (aktVariable.Type == VariableType.tInteger))
+                                    {
+                                        aktVariable.IntegerValue = Convert.ToInt32(sender.GetString(index));
+                                    }
+                                    else if (aktVariable.Type == VariableType.tString)
+                                    {
+                                        aktVariable.StringValue = sender.GetString(index);
+                                    }
+                                    else
+                                    {
+                                        Logging.WriteLog(LogLevel.Error, "VariableType " + aktVariable.Type.ToString() + " is not supported");
+                                    }
+                                }
+                                else
+                                {
+                                    Logging.WriteLog(LogLevel.Error, "HomegearVariable " + name + " from DeviceID " + deviceID.ToString() + " is not writeable!");
+                                    sender.Set(index, aktVariable.ToString());
+                                }
+                            }
+                            else
+                                Logging.WriteLog(LogLevel.Error, "HomegearVariable " + name + " or channel " + channel.ToString() + " from DeviceID " + deviceID.ToString() + " does not exist!");
+                        }
+                        else if (type == "C")
+                        {
+                            if (_homegear.Devices[deviceID].Channels.ContainsKey(channel) && _homegear.Devices[deviceID].Channels[channel].Config.ContainsKey(name))
+                            {
+                                ConfigParameter aktVariable = _homegear.Devices[deviceID].Channels[channel].Config[name];
+                                if (aktVariable.Writeable)
+                                {
+                                    Logging.WriteLog(LogLevel.Debug, "HomegearConfigVariable: PeerID: " + aktVariable.PeerID + " - Name: " + aktVariable.Name + " - Channel: " + aktVariable.Channel.ToString() + " - Type: " + aktVariable.Type.ToString());
+                                    if ((aktVariable.Type == VariableType.tAction) || (aktVariable.Type == VariableType.tBoolean))
+                                    {
+                                        aktVariable.BooleanValue = (sender.GetString(index).ToLower() == "true") ? true : false;
+                                    }
+                                    else if (aktVariable.Type == VariableType.tDouble)
+                                    {
+                                        aktVariable.DoubleValue = Convert.ToDouble(sender.GetString(index));
+                                    }
+                                    else if ((aktVariable.Type == VariableType.tEnum) || (aktVariable.Type == VariableType.tInteger))
+                                    {
+                                        aktVariable.IntegerValue = Convert.ToInt32(sender.GetString(index));
+                                    }
+                                    else if (aktVariable.Type == VariableType.tString)
+                                    {
+                                        aktVariable.StringValue = sender.GetString(index);
+                                    }
+                                    else
+                                    {
+                                        Logging.WriteLog(LogLevel.Error, "VariableType " + aktVariable.Type.ToString() + " is not supported");
+                                    }
+                                }
+                                else
+                                {
+                                    Logging.WriteLog(LogLevel.Error, "HomegearVariable " + name + " from DeviceID " + deviceID.ToString() + " is not writeable!");
+                                    sender.Set(index, aktVariable.ToString());
+                                }
+                            }
+                            else
+                                Logging.WriteLog(LogLevel.Error, "HomegearVariable " + name + " or channel " + channel.ToString() + " from DeviceID " + deviceID.ToString() + " does not exist!");
+                        }
+                        else
+                            Logging.WriteLog(LogLevel.Error, type + " is no valid Type!");
+                    }
+                    else
+                        Logging.WriteLog(LogLevel.Error, "No DeviceID " + deviceID.ToString() + " found!");
+                }
+                else
+                    Logging.WriteLog(LogLevel.Error, "HomegearVariable " + name + " is no valid VariableName");
+
+                _homegearDevicesMutex.ReleaseMutex();
+            }
+            catch (Exception ex)
+            {
+                try { _homegearDevicesMutex.ReleaseMutex(); }
+                catch (Exception) { }
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
@@ -837,20 +966,18 @@ namespace StaKoTecHomeGear
             try
             {
                 Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
-                sender.Instance.Status = "Removing Device ID " + deviceID.ToString();
+                Logging.WriteLog(LogLevel.Info, "Removing Device ID " + deviceID.ToString());
                 _homegearDevicesMutex.WaitOne();
 
                 _rpc.DeleteDevice(deviceID, RPCDeleteDeviceFlags.Force);
 
                 _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
-                sender.Instance.Status = "Removing Device ID " + deviceID.ToString() + " complete";
+                Logging.WriteLog(LogLevel.Info, "Removing Device ID " + deviceID.ToString() + " complete");
             }
             catch (Exception ex)
             {
                 try{ _homegearDevicesMutex.ReleaseMutex(); } catch (Exception) { }
-                sender.Instance.Error = ex.Message;
-                sender.Instance.Status = ex.Message;
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
@@ -860,7 +987,7 @@ namespace StaKoTecHomeGear
             try
             {
                 Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
-                sender.Instance.Status = "Resetting Device ID " + deviceID.ToString();
+                Logging.WriteLog(LogLevel.Info, "Resetting Device ID " + deviceID.ToString());
                 if (_firstInitDevices.Contains(deviceID))
                     _firstInitDevices.Remove(deviceID);
 
@@ -870,13 +997,11 @@ namespace StaKoTecHomeGear
 
                 _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
-                sender.Instance.Status = "Resetting Device ID " + deviceID.ToString() + " complete";
+                Logging.WriteLog(LogLevel.Info, "Resetting Device ID " + deviceID.ToString() + " complete");
             }
             catch (Exception ex)
             {
                 try { _homegearDevicesMutex.ReleaseMutex(); } catch (Exception) { }
-                sender.Instance.Error = ex.Message;
-                sender.Instance.Status = ex.Message;
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
@@ -886,7 +1011,7 @@ namespace StaKoTecHomeGear
             try
             {
                 Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
-                sender.Instance.Status = "Unpairing Device ID " + deviceID.ToString();
+                Logging.WriteLog(LogLevel.Info, "Unpairing Device ID " + deviceID.ToString());
                 if (_firstInitDevices.Contains(deviceID))
                     _firstInitDevices.Remove(deviceID);
 
@@ -896,16 +1021,49 @@ namespace StaKoTecHomeGear
 
                 _homegearDevicesMutex.ReleaseMutex();
                 sender.Set(false);
-                sender.Instance.Status = "Unpairing Device ID " + deviceID.ToString() + " complete";
+                Logging.WriteLog(LogLevel.Info, "Unpairing Device ID " + deviceID.ToString() + " complete");
             }
             catch (Exception ex)
             {
                 try { _homegearDevicesMutex.ReleaseMutex(); } catch (Exception) { }
-                sender.Instance.Error = ex.Message;
-                sender.Instance.Status = ex.Message;
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
+
+
+        void deviceUpdate_ValueChanged(AXVariable sender)
+        {
+            try
+            {
+                Int32 deviceID = _mainInstance.Get("ActionID").GetLongInteger();
+                Logging.WriteLog(LogLevel.Info, "Firmwareupdate for Device ID " + deviceID.ToString());
+  
+                _homegearDevicesMutex.WaitOne();
+
+                if (_homegear.Devices.ContainsKey(deviceID))
+                {
+                    Device aktDevice = _homegear.Devices[deviceID];
+                    if (aktDevice.Firmware != aktDevice.AvailableFirmware)
+                    {
+                        Logging.WriteLog(LogLevel.Info, "Firmwareupdate for Device ID " + deviceID.ToString() + " running. Please wait...");
+                        aktDevice.UpdateFirmware(false);
+                    }
+                    else
+                    {
+                        Logging.WriteLog(LogLevel.Info, "No Firmwareupdate for Device ID " + deviceID.ToString() + " available.");
+                    }
+                }
+                _homegearDevicesMutex.ReleaseMutex();
+                sender.Set(false);
+            }
+            catch (Exception ex)
+            {
+                try { _homegearDevicesMutex.ReleaseMutex(); }
+                catch (Exception) { }
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+            }
+        }
+
 
         void pairingMode_ValueChanged(AXVariable sender)
         {
@@ -915,8 +1073,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                sender.Instance.Error = ex.Message;
-                sender.Instance.Status = ex.Message;
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
@@ -935,8 +1091,6 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                sender.Instance.Error = ex.Message;
-                sender.Instance.Status = ex.Message;
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
