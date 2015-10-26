@@ -19,7 +19,8 @@ namespace StaKoTecHomeGear
         protected AXInstance _mainInstance = null;
 
         protected Mutex _mutex = new Mutex();
-        public Boolean MutexLocked { set { if (value) _mutex.WaitOne(); else _mutex.ReleaseMutex(); } }
+        public Boolean MutexLocked { set { if (value) { _mutex.WaitOne(); mutexIsLocked = true; } else { _mutex.ReleaseMutex(); mutexIsLocked = false; } } }
+        public Boolean mutexIsLocked = false;
 
         protected Int32 _polledVariablesCount = 0;
         public Int32 PolledVariablesCount { get { return _polledVariablesCount; } }
@@ -33,6 +34,7 @@ namespace StaKoTecHomeGear
         public void Lifetick()
         {
             _mutex.WaitOne();
+            mutexIsLocked = true;
             if (Count > 0)
             {
                 foreach (KeyValuePair<Int32, AXInstance> instance in this)
@@ -48,11 +50,13 @@ namespace StaKoTecHomeGear
                 }
             }
             _mutex.ReleaseMutex();
+            mutexIsLocked = false;
         }
 
         public void Reload(Devices homegearDevices)
         {
             _mutex.WaitOne();
+            mutexIsLocked = true;
             try
             {
                 Logging.WriteLog(LogLevel.Debug, "Lösche instanzen-handles");
@@ -129,6 +133,7 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             _mutex.ReleaseMutex();
+            mutexIsLocked = false;
         }
 
         public new void Clear()
@@ -139,7 +144,10 @@ namespace StaKoTecHomeGear
         public void Clear(bool lockMutex)
         {
             if (lockMutex)
+            {
                 _mutex.WaitOne();
+                mutexIsLocked = true;
+            }
             try
             {
                 foreach (KeyValuePair<Int32, AXInstance> instancePair in this)
@@ -167,7 +175,10 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
             if (lockMutex)
+            {
                 _mutex.ReleaseMutex();
+                mutexIsLocked = false;
+            }
         }
 
         public new bool Remove(Int32 key)
@@ -177,7 +188,11 @@ namespace StaKoTecHomeGear
 
         public void Remove(Int32 key, bool lockMutex)
         {
-            if (lockMutex) _mutex.WaitOne();
+            if (lockMutex)
+            {
+                _mutex.WaitOne();
+                mutexIsLocked = true;
+            }
             try
             {
                 if (ContainsKey(key))
@@ -196,7 +211,11 @@ namespace StaKoTecHomeGear
             {
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
-            if (lockMutex) _mutex.ReleaseMutex();
+            if (lockMutex)
+            {
+                _mutex.ReleaseMutex();
+                mutexIsLocked = false;
+            }
         }
 
         private void OnVariableValueChanged(AXVariable sender)

@@ -382,6 +382,11 @@ namespace StaKoTecHomeGear
                             //Firmwareupgrades prüfen
                             /*_homegearDevicesMutex.WaitOne();
                             _instances.MutexLocked = true;
+                            while (!_instances.mutexIsLocked)
+                            {
+                                Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                                Thread.Sleep(10);
+                            }
                             foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
                             {
                                 deviceCheckFirmwareUpdates(aktInstance.Key);
@@ -840,6 +845,12 @@ namespace StaKoTecHomeGear
        
                 _homegearDevicesMutex.WaitOne();
                 _instances.MutexLocked = true;
+                while (!_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
+
                 if (_homegear.Devices.ContainsKey(_deviceVars_DeviceID))
                 {
                     Device aktDevice = _homegear.Devices[_deviceVars_DeviceID];
@@ -1154,6 +1165,11 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(LogLevel.Info, "Reloading Instances");
                 _instances.Reload(_homegear.Devices);
                 _instances.MutexLocked = true;
+                while (!_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 try
                 {
                     x = 0;
@@ -1423,6 +1439,11 @@ namespace StaKoTecHomeGear
                 
                 _homegearDevicesMutex.WaitOne();
                 _instances.MutexLocked = true;
+                while (!_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 if(_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
                 {
                     Logging.WriteLog(LogLevel.Debug, "aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
@@ -1815,7 +1836,12 @@ namespace StaKoTecHomeGear
         {
             try
             {
-                _instances.MutexLocked = true; 
+                _instances.MutexLocked = true;
+                while (!_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 Logging.WriteLog(LogLevel.Debug, "RPC: " + device.ID.ToString() + " " + link.RemotePeerID.ToString() + " " + link.RemoteChannel.ToString() + " " + parameter.Name + " = " + parameter.ToString());
                 if (_instances.ContainsKey(device.ID))
                     _instances[device.ID].Status = "Link-Parameter " + link.Name + " updated to " + link.ToString();
@@ -1833,6 +1859,11 @@ namespace StaKoTecHomeGear
             try
             {
                 _instances.MutexLocked = true;
+                while (!_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 Logging.WriteLog(LogLevel.Debug, "RPC: " + device.ID.ToString() + " " + parameter.Name + " = " + parameter.ToString());
                 if (_instances.ContainsKey(device.ID))
                     _instances[device.ID].Status = "Config-Parameter " + parameter.Name + " updated to " + parameter.ToString();
@@ -1886,6 +1917,11 @@ namespace StaKoTecHomeGear
         void _homegear_DeviceVariableUpdated(Homegear sender, Device device, Channel channel, Variable variable)
         {
             _instances.MutexLocked = true;
+            while (!_instances.mutexIsLocked)
+            {
+                Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                Thread.Sleep(10);
+            }
             try
             {
                 Int32 deviceID = device.ID;
