@@ -551,20 +551,23 @@ namespace StaKoTecHomeGear
             try
             {
                 _homegearSystemVariablesMutex.WaitOne();
-                if ((_systemVariableName.GetString(index).Trim() == "") && (_tempSystemvariableNames.ContainsKey(index)))
+                String varName = _systemVariableName.GetString(index).Trim();
+                if ((varName == "") && (_tempSystemvariableNames.ContainsKey(index)))
                 {
                     Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _tempSystemvariableNames[index] + "' wurde von aX gelöscht");
                     _rpc.DeleteSystemVariable(new SystemVariable(_tempSystemvariableNames[index], 0));
+                    _tempSystemvariableNames.Remove(index);
                 }
-                else if ((_systemVariableName.GetString(index).Trim() != "") && (!_tempSystemvariableNames.ContainsKey(index)))
+                else if ((varName != "") && (!_tempSystemvariableNames.ContainsKey(index)))
                 {
-                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _systemVariableName.GetString(index).Trim() + "' wurde von aX erstellt");
-                    _rpc.SetSystemVariable(new SystemVariable(_systemVariableName.GetString(index).Trim(), 0));
+                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + varName + "' wurde von aX erstellt");
+                    _rpc.SetSystemVariable(new SystemVariable(varName, 0));
+                    _tempSystemvariableNames.Add(index, varName);
                 }
-                else if ((_systemVariableName.GetString(index).Trim() != "") && (_tempSystemvariableNames.ContainsKey(index)))  //SystemVariable wurde umbenannt
+                else if ((varName != "") && (_tempSystemvariableNames.ContainsKey(index)))  //SystemVariable wurde umbenannt
                 {
-                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _tempSystemvariableNames[index] + "' wurde von aX umbenannt in '" + _systemVariableName.GetString(index).Trim() + "'");
-                    _rpc.SetSystemVariable(new SystemVariable(_systemVariableName.GetString(index).Trim(), _systemVariableValue.GetString(index)));
+                    Logging.WriteLog(LogLevel.Info, "Systemvariable '" + _tempSystemvariableNames[index] + "' wurde von aX umbenannt in '" + varName + "'");
+                    _rpc.SetSystemVariable(new SystemVariable(varName, _systemVariableValue.GetString(index)));
                     _homegearSystemVariablesMutex.ReleaseMutex();
                     Thread.Sleep(1000);
                     _homegearSystemVariablesMutex.WaitOne();
@@ -583,12 +586,15 @@ namespace StaKoTecHomeGear
             try
             {
                 _homegearSystemVariablesMutex.WaitOne();
-                
-                if (_systemVariableName.GetString(index).Trim() != "")
+                String varName = _systemVariableName.GetString(index).Trim();
+                if (varName != "")
                 {
-                    Logging.WriteLog(LogLevel.Info, "Value of Systemvariable '" + _systemVariableName.GetString(index) + "' in aX has changed to " + sender.GetString(index));
-                    _rpc.SetSystemVariable(new SystemVariable(_systemVariableName.GetString(index), sender.GetString(index)));
+                    Logging.WriteLog(LogLevel.Info, "Wert von Systemvariable '" + varName + "' in aX geändert in: " + sender.GetString(index));
+                    _rpc.SetSystemVariable(new SystemVariable(varName, sender.GetString(index)));
+                    _homegear.SystemVariables.Reload();
                 }
+                else
+                    sender.Set(index, "");
             }
             catch (Exception ex)
             {
