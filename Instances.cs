@@ -18,8 +18,6 @@ namespace StaKoTecHomeGear
         protected AX _aX = null;
         protected AXInstance _mainInstance = null;
 
-        protected Dictionary<String, Dictionary<String, Dictionary<String, AXVariableType>>> _tempClassVariabes = null;  //InstanceName[SubinstanceName] = VariableName[VariableType]  --> SubinstanceName of ParentInstace is "0"
-
         protected Mutex _mutex = new Mutex();
         public Boolean MutexLocked { set { if (value) { _mutex.WaitOne(); mutexIsLocked = true; } else { _mutex.ReleaseMutex(); mutexIsLocked = false; } } }
         public Boolean mutexIsLocked = false;
@@ -31,7 +29,6 @@ namespace StaKoTecHomeGear
         {
             _aX = ax;
             _mainInstance = mainInstance;
-            _tempClassVariabes = new Dictionary<String, Dictionary<String, Dictionary<String, AXVariableType>>>();
         }
 
         public void Lifetick()
@@ -79,9 +76,6 @@ namespace StaKoTecHomeGear
                     foreach (String aktaXInstanceName in aktInstancePair.Value)
                     {
                         AXInstance testInstance = new AXInstance(_aX, aktaXInstanceName, "Status", "err");
-
-                        
-
                         Int32 aktID = testInstance.Get("ID").GetLongInteger();
                         if ((aktID <= 0) || (!homegearDevices.ContainsKey(aktID)))  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1 
                         {
@@ -92,65 +86,19 @@ namespace StaKoTecHomeGear
                         if (aktInstancePair.Key != homegearDevices[aktID].TypeString)
                             continue;
 
-                        Boolean mitTest = true;
+                        testInstance.SetVariableEvents(true);
+                        testInstance.PollingInterval = 20;
+                        testInstance.VariableValueChanged += OnVariableValueChanged;
+                        _polledVariablesCount += testInstance.PolledVariablesCount;
 
-                        if (mitTest)
-                            Logging.WriteLog(LogLevel.Debug, "Prüfe ob Klasse " + testInstance.ClassName + " bereits in Temp-Klassennamen hinzugefügt wurde");
-                        if (!_tempClassVariabes.ContainsKey(testInstance.ClassName) || !mitTest)
+                        ////////////////////////////////////////////////////////////////////
+                        // Subinstanzen suchen und Ereignishandler hinzufügen
+                        foreach (AXInstance aktSubinstance in testInstance.Subinstances)
                         {
-                            Dictionary<String, Dictionary<String, AXVariableType>> tempInstanceStruct = new Dictionary<String, Dictionary<String, AXVariableType>>();
-                            Dictionary<String, AXVariableType> variables = new Dictionary<String, AXVariableType>();
-                            if (mitTest)
-                            {
-                                Logging.WriteLog(LogLevel.Debug, "Füge Klasse " + testInstance.Name + " in Temp-Klassennamen hinzu");
-
-                                foreach (AXVariable tempAxVar in testInstance.Variables)
-                                    variables.Add(tempAxVar.Name, tempAxVar.Type);
-                                tempInstanceStruct.Add("0", variables);
-                                Logging.WriteLog(LogLevel.Debug, "Füge ParentVariables hinzu: " + variables.ToString());
-                            }
-                            testInstance.SetVariableEvents(true);
-                            testInstance.PollingInterval = 20;
-                            testInstance.VariableValueChanged += OnVariableValueChanged;
-                            _polledVariablesCount += testInstance.PolledVariablesCount;
-
-                            ////////////////////////////////////////////////////////////////////
-                            // Subinstanzen suchen und Ereignishandler hinzufügen
-                            foreach (AXInstance aktSubinstance in testInstance.Subinstances)
-                            {
-                                if (mitTest)
-                                {
-                                    Dictionary<String, AXVariableType> variablesSub = new Dictionary<String, AXVariableType>();
-                                    foreach (AXVariable tempAxVar in aktSubinstance.Variables)
-                                        variablesSub.Add(tempAxVar.Name, tempAxVar.Type);
-                                    Logging.WriteLog(LogLevel.Debug, "Füge Subinstanzariables hinzu: " + variablesSub.ToString());
-                                    tempInstanceStruct.Add(aktSubinstance.Name, variablesSub);
-                                }
-
-                                aktSubinstance.SetVariableEvents(true);
-                                aktSubinstance.PollingInterval = 20;
-                                aktSubinstance.VariableValueChanged += OnSubinstanceVariableValueChanged;
-                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
-                            }
-
-                            if (mitTest)
-                            {
-                                _tempClassVariabes.Add(testInstance.ClassName, tempInstanceStruct);
-                                Logging.WriteLog(LogLevel.Debug, "Temp-Klassennamen:");
-                                foreach (KeyValuePair<String, Dictionary<String, Dictionary<String, AXVariableType>>> aktInstance in _tempClassVariabes)
-                                {
-                                    Logging.WriteLog(LogLevel.Debug, aktInstance.Key + ":");
-                                    foreach (KeyValuePair<String, Dictionary<String, AXVariableType>> aktSubinstance in aktInstance.Value)
-                                    {
-                                        Logging.WriteLog(LogLevel.Debug, "  " + aktSubinstance.Key + ":");
-                                        foreach (KeyValuePair<String, AXVariableType> aktVariable in aktSubinstance.Value)
-                                        {
-                                            Logging.WriteLog(LogLevel.Debug, "    " + aktVariable.Key + " -> " + aktVariable.Value);
-                                        }
-                                    }
-                                }
-                                Logging.WriteLog(LogLevel.Debug, "------------------------------------------------------------");
-                            }
+                            aktSubinstance.SetVariableEvents(true);
+                            aktSubinstance.PollingInterval = 20;
+                            aktSubinstance.VariableValueChanged += OnSubinstanceVariableValueChanged;
+                            _polledVariablesCount += aktSubinstance.PolledVariablesCount;
                         }
                     }
                 }
@@ -177,7 +125,6 @@ namespace StaKoTecHomeGear
             }
             try
             {
-                _tempClassVariabes.Clear();
                 foreach (KeyValuePair<Int32, AXInstance> instancePair in this)
                 {
                     try
