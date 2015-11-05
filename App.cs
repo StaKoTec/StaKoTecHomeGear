@@ -162,6 +162,9 @@ namespace StaKoTecHomeGear
                 AXVariable pairingMode = _mainInstance.Get("PairingMode");
                 pairingMode.Set(false);
                 pairingMode.ValueChanged += pairingMode_ValueChanged;
+                AXVariable searchDevices = _mainInstance.Get("SearchDevices");
+                searchDevices.Set(false);
+                searchDevices.ValueChanged += searchDevices_ValueChanged;
                 AXVariable deviceUnpair = _mainInstance.Get("DeviceUnpair");
                 deviceUnpair.Set(false);
                 deviceUnpair.ValueChanged += deviceUnpair_ValueChanged;
@@ -420,6 +423,7 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
             }
         }
+
 
         void _deviceVars_Actual_ArrayValueChanged(AXVariable sender, ushort index)
         {
@@ -1087,6 +1091,23 @@ namespace StaKoTecHomeGear
             try
             {
                 _homegear.EnablePairingMode(sender.GetBool());
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+            }
+        }
+
+        void searchDevices_ValueChanged(AXVariable sender)
+        {
+            try
+            {
+                if (sender.GetBool())
+                {
+                    Logging.WriteLog(LogLevel.Info, "Suche neue Geräte");
+                    _homegear.SearchDevices();
+                    sender.Set(false);
+                }
             }
             catch (Exception ex)
             {
