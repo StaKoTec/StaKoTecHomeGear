@@ -146,7 +146,7 @@ namespace StaKoTecHomeGear
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
 
                 _mainInstance = new AXInstance(_aX, instanceName, "Status", "err"); //Instanz-Objekt erstellen
-                _mainInstance.PollingInterval = 200;
+                _mainInstance.PollingInterval = 100;
                 _mainInstance.SetVariableEvents(true);
                 Logging.Init(_aX, _mainInstance);
                 _varConverter = new VariableConverter(_mainInstance);
@@ -186,6 +186,9 @@ namespace StaKoTecHomeGear
                 AXVariable getDeviceConfigVars = _mainInstance.Get("GetDeviceConfigVars");
                 getDeviceConfigVars.Set(false);
                 getDeviceConfigVars.ValueChanged += getDeviceVars_ValueChanged;
+                AXVariable setAllRoaming = _mainInstance.Get("SetAllRoaming");
+                setAllRoaming.Set(false);
+                setAllRoaming.ValueChanged += setAllRoaming_ValueChanged;
                 AXVariable homegearErrorQuit = _mainInstance.Get("HomegearErrorQuit");
                 UInt16 x = 0;
                 for (x = 0; x < homegearErrorQuit.Length; x++)
@@ -641,7 +644,37 @@ namespace StaKoTecHomeGear
             Double currentTime = (DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalMilliseconds;
             return currentTime;
         }
-        
+
+
+        void setAllRoaming_ValueChanged(AXVariable sender)
+        {
+            try
+            {
+                sender.Set(false);
+                Logging.WriteLog(LogLevel.Info, "Setze Roaming aktiv für alle Geräte");
+                foreach (KeyValuePair<Int32, Device> aktDevice in _homegear.Devices)
+                {
+                    if (!aktDevice.Value.Channels.ContainsKey(0))
+                        continue;
+
+                    if (!aktDevice.Value.Channels[0].Config.ContainsKey("ROAMING"))
+                        continue;
+
+                    if (!aktDevice.Value.Channels[0].Config["ROAMING"].BooleanValue)
+                    {
+                        aktDevice.Value.Channels[0].Config["ROAMING"].BooleanValue = true;
+                        Logging.WriteLog(LogLevel.Info, "Gerät " + aktDevice.Value.Name + " (ID: " + aktDevice.Value.ID + ") hinzugefügt");
+                        aktDevice.Value.Channels[0].Config.Put();
+                    }
+                    else
+                        Logging.WriteLog(LogLevel.Info, "Gerät " + aktDevice.Value.Name + " (ID: " + aktDevice.Value.ID + ") war schon auf Roaming");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+            }
+        }
 
         void PushConfig()
         {
@@ -657,11 +690,15 @@ namespace StaKoTecHomeGear
                     {
                         foreach (KeyValuePair<Device, List<Int32>> aktDevice in aktInstance.Value)
                         {
-                            foreach (Int32 aktChannel in aktDevice.Value)
+                            //foreach (Int32 aktChannel in aktDevice.Value)
+                            foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Key.Channels)  //vorrübergehend alle Channels übertragen, weils sonst quatsch im Gerät ankommt. Moin
                             {
-                                Logging.WriteLog(LogLevel.Info, "[" + aktInstance.Key.Path + "] Pushe Config für Kanal " + aktChannel.ToString());
-                                aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannel.ToString();
-                                aktDevice.Key.Channels[aktChannel].Config.Put();
+                                Int32 aktChannelNumber = aktChannel.Key;
+                                Logging.WriteLog(LogLevel.Info, "[" + aktInstance.Key.Path + "] Pushe Config für Kanal " + aktChannelNumber.ToString());
+                                aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannelNumber.ToString();
+                                //aktDevice.Key.Channels[aktChannelNumber].Config.Put();
+                                aktChannel.Value.Config.Put();
+                                Thread.Sleep(1000);  //Sendepause zuwischen den Geräten falls dirverse Geräte gleichzeitig pushen wollen
                             }
                         }
                         if (aktInstance.Key.VariableExists("ConfigValuesChanged"))
