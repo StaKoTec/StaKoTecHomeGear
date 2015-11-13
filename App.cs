@@ -1724,7 +1724,7 @@ namespace StaKoTecHomeGear
                 _rpc.ServerConnected += _rpc_ServerConnected;
                 _rpc.ServerDisconnected += _rpc_ServerDisconnected;
 
-                _homegear = new Homegear(_rpc);
+                _homegear = new Homegear(_rpc, true);
                 _homegear.ConnectError += _homegear_ConnectError;
                 _homegear.DeviceConfigParameterUpdated += _homegear_DeviceConfigParameterUpdated;
                 _homegear.DeviceLinkConfigParameterUpdated += _homegear_DeviceLinkConfigParameterUpdated;
