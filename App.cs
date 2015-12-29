@@ -40,6 +40,7 @@ namespace StaKoTecHomeGear
         List<String> _warningStates = null;
 
         List<Int32> _firstInitDevices = null;
+        Dictionary<Device, AXInstance> _getActualDeviceDataDictionary = null;
 
         bool _disposing = false;
         bool _initCompleted = false;
@@ -84,6 +85,7 @@ namespace StaKoTecHomeGear
         Dictionary<AXInstance, Dictionary<Device, List<Int32>>> _aktQueue = null;
         Dictionary<String, List<Int32>> _instancesConfigChannels = null;
         Thread _pushConfigThread = null;
+        Thread _getActualDeviceDataThread = null;
 
         Instances _instances = null;
         Mutex _homegearDevicesMutex = new Mutex();
@@ -141,6 +143,7 @@ namespace StaKoTecHomeGear
 
 
                 _firstInitDevices = new List<Int32>();
+                _getActualDeviceDataDictionary = new Dictionary<Device, AXInstance>();
 
                 _aX.ShuttingDown += aX_ShuttingDown;
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
@@ -290,8 +293,10 @@ namespace StaKoTecHomeGear
                             //Logging.WriteLog(cycleCounter.ToString() + " geht los");
                             _pushConfigThread = new Thread(PushConfig);
                             _pushConfigThread.Start();
-                            
+
                         }
+
+
                         //Logging.WriteLog(cycleCounter.ToString() + " feddich");
 
                         if (!_rpc.IsConnected)
@@ -386,11 +391,16 @@ namespace StaKoTecHomeGear
                             }
 
                             //Firmwareupgrades prüfen
-                            /*_homegearDevicesMutex.WaitOne();
+                            _homegearDevicesMutex.WaitOne();
+                            while (_instances.mutexIsLocked)
+                            {
+                                Logging.WriteLog(LogLevel.Debug, "checkFirmwareUpdates waiting for getting _instances-Mutex");
+                                Thread.Sleep(10);
+                            }
                             _instances.MutexLocked = true;
                             while (!_instances.mutexIsLocked)
                             {
-                                Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                                Logging.WriteLog(LogLevel.Debug, "checkFirmwareUpdates waiting for getting _instances-Mutex");
                                 Thread.Sleep(10);
                             }
                             foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
@@ -398,7 +408,7 @@ namespace StaKoTecHomeGear
                                 deviceCheckFirmwareUpdates(aktInstance.Key);
                             }
                             _homegearDevicesMutex.ReleaseMutex();
-                            _instances.MutexLocked = false;*/
+                            _instances.MutexLocked = false;
                         }
                         //Logging.WriteLog("Cycle-Dauer: " + (lastCycletime).ToString() + "s");
                         j++;
@@ -889,12 +899,17 @@ namespace StaKoTecHomeGear
                 _deviceVars_DeviceID = _mainInstance.Get("ActionID").GetLongInteger();
 
                 UInt16 x = 0;
-       
+
                 _homegearDevicesMutex.WaitOne();
+                while (_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "getDeviceVars_ValueChanged waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 _instances.MutexLocked = true;
                 while (!_instances.mutexIsLocked)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Logging.WriteLog(LogLevel.Debug, "getDeviceVars_ValueChanged waiting for getting _instances-Mutex");
                     Thread.Sleep(10);
                 }
 
@@ -1211,11 +1226,17 @@ namespace StaKoTecHomeGear
             {
                 if (!sender.GetBool())
                     return;
-                
+
                 _initCompleted = false;
                 if (_pushConfigThread != null && _pushConfigThread.IsAlive)
                     _pushConfigThread.Abort();
 
+
+                if (_getActualDeviceDataThread != null && _getActualDeviceDataThread.IsAlive)
+                    _getActualDeviceDataThread.Abort();
+
+                if (_getActualDeviceDataDictionary.Count() > 0)
+                    _getActualDeviceDataDictionary.Clear();
 
                 UInt16 x = 0;
                 Logging.WriteLog(LogLevel.Info, "Init Devices");
@@ -1228,10 +1249,15 @@ namespace StaKoTecHomeGear
                 _homegearDevicesMutex.WaitOne();
                 Logging.WriteLog(LogLevel.Info, "Reloading Instances");
                 _instances.Reload(_homegear.Devices);
+                while (_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "init_ValueChanged waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 _instances.MutexLocked = true;
                 while (!_instances.mutexIsLocked)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Logging.WriteLog(LogLevel.Debug, "init_ValueChanged waiting for getting _instances-Mutex");
                     Thread.Sleep(10);
                 }
                 try
@@ -1280,8 +1306,7 @@ namespace StaKoTecHomeGear
                                 //Aktuelle Config- und Statuswerte Werte auslesen
                                 if (!_firstInitDevices.Contains(devicePair.Key))
                                 {
-                                    Logging.WriteLog(LogLevel.Debug, "getActualDeviceData for Device ID " + devicePair.Key.ToString());
-                                    getActualDeviceData(devicePair.Value, aktInstanz);
+                                    _getActualDeviceDataDictionary.Add(devicePair.Value, aktInstanz);
                                     _firstInitDevices.Add(devicePair.Key);
                                 }
 
@@ -1330,6 +1355,10 @@ namespace StaKoTecHomeGear
                 _initCompleted = true;
                 Logging.WriteLog(LogLevel.Info, "Init Devices completed");
                 _homegearDevicesMutex.ReleaseMutex();
+
+
+                _getActualDeviceDataThread = new Thread(getActualDeviceData);
+                _getActualDeviceDataThread.Start();
             }
             catch (Exception ex)
             {
@@ -1352,67 +1381,93 @@ namespace StaKoTecHomeGear
             }
         }
 
-        void getActualDeviceData(Device aktDevice, AXInstance aktInstanz)
+        void getActualDeviceData()
         {
             try
             {
-                foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
+                foreach (KeyValuePair<Device, AXInstance> aktPair in _getActualDeviceDataDictionary)
                 {
-                    foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
+                    _homegearDevicesMutex.WaitOne();
+                    while (_instances.mutexIsLocked)
                     {
-                        var aktVar = Wert.Value;
-                        if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
-                            continue;
-                        String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
-                        if (aktInstanz.VariableExists(aktVarName))
+                        Logging.WriteLog(LogLevel.Debug, "getActualDeviceData waiting for getting _instances-Mutex");
+                        Thread.Sleep(10);
+                    }
+                    _instances.MutexLocked = true;
+                    while (!_instances.mutexIsLocked)
+                    {
+                        Logging.WriteLog(LogLevel.Debug, "getActualDeviceData waiting for getting _instances-Mutex");
+                        Thread.Sleep(10);
+                    }
+
+                    Device aktDevice = aktPair.Key;
+                    AXInstance aktInstanz = aktPair.Value;
+
+                    Logging.WriteLog(LogLevel.Debug, "Hole aktuelle Variablen von Device " + aktDevice.ID.ToString()  + " (" + aktDevice.Name + ")");
+                    foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
+                    {
+                        foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
                         {
-                            AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                            if (aktAXVar != null)
+                            var aktVar = Wert.Value;
+                            if (aktVar.Type == VariableType.tAction)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
+                                continue;
+                            String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
+                            if (aktInstanz.VariableExists(aktVarName))
                             {
-                                _varConverter.SetAXVariable(aktAXVar, aktVar);
-                                setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                                AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                                if (aktAXVar != null)
+                                {
+                                    _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                    setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                                }
+                            }
+                            String subinstance = "V" + aktChannel.Key.ToString("D2");
+                            if (aktInstanz.SubinstanceExists(subinstance))
+                            {
+                                AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                                if (aktAXVar2 != null)
+                                {
+                                    _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                                    setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                                }
                             }
                         }
-                        String subinstance = "V" + aktChannel.Key.ToString("D2");
-                        if (aktInstanz.SubinstanceExists(subinstance))
+
+                        foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
                         {
-                            AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                            if (aktAXVar2 != null)
+                            var aktVar = configName.Value;
+                            String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
+                            if (aktInstanz.VariableExists(aktVarName))
                             {
-                                _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                                setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                                AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                                if (aktAXVar != null)
+                                {
+                                    _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                }
+                            }
+                            String subinstance = "C" + aktChannel.Key.ToString("D2");
+                            if (aktInstanz.SubinstanceExists(subinstance))
+                            {
+                                AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                                if (aktAXVar2 != null)
+                                {
+                                    _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                                }
                             }
                         }
                     }
 
-                    foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
-                    {
-                        var aktVar = configName.Value;
-                        String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
-                        if (aktInstanz.VariableExists(aktVarName))
-                        {
-                            AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                            if (aktAXVar != null)
-                            {
-                                _varConverter.SetAXVariable(aktAXVar, aktVar);
-                            }
-                        }
-                        String subinstance = "C" + aktChannel.Key.ToString("D2");
-                        if (aktInstanz.SubinstanceExists(subinstance))
-                        {
-                            AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                            if (aktAXVar2 != null)
-                            {
-                                _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                            }
-                        }
-                    }
+                    _homegearDevicesMutex.ReleaseMutex();
+                    _instances.MutexLocked = false;
+                    Thread.Sleep(10);
                 }
             }
             catch (Exception ex)
             {
                 _mainInstance.Error = ex.Message;
                 Logging.WriteLog(LogLevel.Info, ex.Message, ex.StackTrace);
+                _homegearDevicesMutex.ReleaseMutex();
+                _instances.MutexLocked = false;
             }
         }
 
@@ -1502,12 +1557,18 @@ namespace StaKoTecHomeGear
                     return;
                 
                 _homegearDevicesMutex.WaitOne();
+                while (_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "OnInstanceVariableValueChanged waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 _instances.MutexLocked = true;
                 while (!_instances.mutexIsLocked)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Logging.WriteLog(LogLevel.Debug, "OnInstanceVariableValueChanged waiting for getting _instances-Mutex");
                     Thread.Sleep(10);
                 }
+
                 if(_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
                 {
                     Logging.WriteLog(LogLevel.Debug, "aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
@@ -1900,10 +1961,15 @@ namespace StaKoTecHomeGear
         {
             try
             {
+                while (_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "_homegear_DeviceLinkConfigParameterUpdated waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 _instances.MutexLocked = true;
                 while (!_instances.mutexIsLocked)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Logging.WriteLog(LogLevel.Debug, "_homegear_DeviceLinkConfigParameterUpdated waiting for getting _instances-Mutex");
                     Thread.Sleep(10);
                 }
                 Logging.WriteLog(LogLevel.Debug, "RPC: " + device.ID.ToString() + " " + link.RemotePeerID.ToString() + " " + link.RemoteChannel.ToString() + " " + parameter.Name + " = " + parameter.ToString());
@@ -1922,10 +1988,15 @@ namespace StaKoTecHomeGear
         {
             try
             {
+                while (_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "_homegear_DeviceConfigParameterUpdated waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
                 _instances.MutexLocked = true;
                 while (!_instances.mutexIsLocked)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                    Logging.WriteLog(LogLevel.Debug, "_homegear_DeviceConfigParameterUpdated waiting for getting _instances-Mutex");
                     Thread.Sleep(10);
                 }
                 Logging.WriteLog(LogLevel.Debug, "RPC: " + device.ID.ToString() + " " + parameter.Name + " = " + parameter.ToString());
@@ -1980,10 +2051,15 @@ namespace StaKoTecHomeGear
 
         void _homegear_DeviceVariableUpdated(Homegear sender, Device device, Channel channel, Variable variable)
         {
+            while (_instances.mutexIsLocked)
+            {
+                Logging.WriteLog(LogLevel.Debug, "_homegear_DeviceVariableUpdated waiting for getting _instances-Mutex");
+                Thread.Sleep(10);
+            }
             _instances.MutexLocked = true;
             while (!_instances.mutexIsLocked)
             {
-                Logging.WriteLog(LogLevel.Debug, "Waiting for getting _instances-Mutex");
+                Logging.WriteLog(LogLevel.Debug, "_homegear_DeviceVariableUpdated waiting for getting _instances-Mutex");
                 Thread.Sleep(10);
             }
             try
