@@ -41,6 +41,7 @@ namespace StaKoTecHomeGear
 
         List<Int32> _firstInitDevices = null;
         Dictionary<Device, AXInstance> _getActualDeviceDataDictionary = null;
+        List<String> _ignoredVariableChanged = null;
 
         bool _disposing = false;
         bool _initCompleted = false;
@@ -91,7 +92,7 @@ namespace StaKoTecHomeGear
         Mutex _homegearDevicesMutex = new Mutex();
         Mutex _homegearSystemVariablesMutex = new Mutex();
 
-        public void Run(String instanceName)
+        public void Run(String instanceName, String version)
         {
             try
             {
@@ -144,6 +145,7 @@ namespace StaKoTecHomeGear
 
                 _firstInitDevices = new List<Int32>();
                 _getActualDeviceDataDictionary = new Dictionary<Device, AXInstance>();
+                _ignoredVariableChanged = new List<String>();
 
                 _aX.ShuttingDown += aX_ShuttingDown;
                 _aX.SpsIdChanged += _aX_SpsIdChanged;
@@ -152,6 +154,7 @@ namespace StaKoTecHomeGear
                 _mainInstance.PollingInterval = 100;
                 _mainInstance.SetVariableEvents(true);
                 Logging.Init(_aX, _mainInstance);
+                Logging.WriteLog(LogLevel.Always, "StaKoTecHomegear V " + version + " started");
                 _varConverter = new VariableConverter(_mainInstance);
                 _instances = new Instances(_aX, _mainInstance);
                 _instances.VariableValueChanged += OnInstanceVariableValueChanged;
@@ -159,6 +162,8 @@ namespace StaKoTecHomeGear
 
                 _instancesConfigChannels = new Dictionary<String, List<Int32>>();
 
+                AXVariable aXVersion = _mainInstance.Get("Version");
+                aXVersion.Set(version);
                 AXVariable init = _mainInstance.Get("Init");
                 init.Set(false);
                 init.ValueChanged += init_ValueChanged;
@@ -260,7 +265,7 @@ namespace StaKoTecHomeGear
                 Stopwatch stopWatch = new Stopwatch();
                 Stopwatch stopWatchThreadTimer = new Stopwatch();
                 Double lastCycletime = 0;
-                Double cycletimerServiceMessages = 0;
+                Double cycletimerServiceMessages = 999;
                 Double cycletimerInterfaceCheck = 0;
                 while (!_disposing)
                 {
@@ -700,14 +705,11 @@ namespace StaKoTecHomeGear
                     {
                         foreach (KeyValuePair<Device, List<Int32>> aktDevice in aktInstance.Value)
                         {
-                            //foreach (Int32 aktChannel in aktDevice.Value)
-                            foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Key.Channels)  //vorrübergehend alle Channels übertragen, weils sonst quatsch im Gerät ankommt. Moin
+                            foreach (Int32 aktChannel in aktDevice.Value)
                             {
-                                Int32 aktChannelNumber = aktChannel.Key;
-                                Logging.WriteLog(LogLevel.Info, "[" + aktInstance.Key.Path + "] Pushe Config für Kanal " + aktChannelNumber.ToString());
-                                aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannelNumber.ToString();
-                                //aktDevice.Key.Channels[aktChannelNumber].Config.Put();
-                                aktChannel.Value.Config.Put();
+                                Logging.WriteLog(LogLevel.Info, "[" + aktInstance.Key.Path + "] Pushe Config für Kanal " + aktChannel.ToString());
+                                aktInstance.Key.Status = "Pushe Config für Kanal " + aktChannel.ToString();
+                                aktDevice.Key.Channels[aktChannel].Config.Put();
                                 Thread.Sleep(1000);  //Sendepause zuwischen den Geräten falls dirverse Geräte gleichzeitig pushen wollen
                             }
                         }
@@ -1243,7 +1245,7 @@ namespace StaKoTecHomeGear
 
                 UpdateSystemVariables();
 
-                _mainInstance.Get("HomeGearVersion").Set(_homegear.Version);
+                _mainInstance.Get("HomeGearVersion").Set(_homegear.Version.Replace("Homegear ", ""));
                 getInterfaces();
 
                 _homegearDevicesMutex.WaitOne();
@@ -1352,8 +1354,6 @@ namespace StaKoTecHomeGear
                     _deviceStateColor.Set(x, (Int16)DeviceStatus.Nichts);
 
                 }
-                _initCompleted = true;
-                Logging.WriteLog(LogLevel.Info, "Init Devices completed");
                 _homegearDevicesMutex.ReleaseMutex();
 
 
@@ -1385,21 +1385,21 @@ namespace StaKoTecHomeGear
         {
             try
             {
+                _homegearDevicesMutex.WaitOne();
+                while (_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "getActualDeviceData waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
+                _instances.MutexLocked = true;
+                while (!_instances.mutexIsLocked)
+                {
+                    Logging.WriteLog(LogLevel.Debug, "getActualDeviceData waiting for getting _instances-Mutex");
+                    Thread.Sleep(10);
+                }
+
                 foreach (KeyValuePair<Device, AXInstance> aktPair in _getActualDeviceDataDictionary)
                 {
-                    _homegearDevicesMutex.WaitOne();
-                    while (_instances.mutexIsLocked)
-                    {
-                        Logging.WriteLog(LogLevel.Debug, "getActualDeviceData waiting for getting _instances-Mutex");
-                        Thread.Sleep(10);
-                    }
-                    _instances.MutexLocked = true;
-                    while (!_instances.mutexIsLocked)
-                    {
-                        Logging.WriteLog(LogLevel.Debug, "getActualDeviceData waiting for getting _instances-Mutex");
-                        Thread.Sleep(10);
-                    }
-
                     Device aktDevice = aktPair.Key;
                     AXInstance aktInstanz = aktPair.Value;
 
@@ -1456,11 +1456,11 @@ namespace StaKoTecHomeGear
                             }
                         }
                     }
-
-                    _homegearDevicesMutex.ReleaseMutex();
-                    _instances.MutexLocked = false;
-                    Thread.Sleep(10);
                 }
+                _homegearDevicesMutex.ReleaseMutex();
+                _instances.MutexLocked = false;
+                _initCompleted = true;
+                Logging.WriteLog(LogLevel.Info, "Init Devices completed");
             }
             catch (Exception ex)
             {
@@ -1468,12 +1468,17 @@ namespace StaKoTecHomeGear
                 Logging.WriteLog(LogLevel.Info, ex.Message, ex.StackTrace);
                 _homegearDevicesMutex.ReleaseMutex();
                 _instances.MutexLocked = false;
+                _initCompleted = true;
+                Logging.WriteLog(LogLevel.Info, "Init Devices completed");
             }
         }
 
         void OnSubinstanceVariableValueChanged(AXVariable sender)
         {
             if ((sender.Name == "Lifetick") || (sender.Name == "DataValid") || (sender.Name == "RSSI") || (sender.Name == "Status") || (sender.Name == "err") || (sender.Name == "LastChange"))
+                return;
+
+            if (_ignoredVariableChanged.Contains(sender.Path))  //Variablen die nicht in den Homegear-Devices vorkommen, werden einmal registriert und dann nie mehr ausgewertet
                 return;
 
             _homegearDevicesMutex.WaitOne();
@@ -1485,6 +1490,7 @@ namespace StaKoTecHomeGear
             try
             {
                 AXInstance parentInstance = sender.Instance.Parent;
+                Boolean variableExists = false;
                 if (_homegear.Devices.ContainsKey(parentInstance.Get("ID").GetLongInteger()))
                 {
                     Logging.WriteLog(LogLevel.Debug, "aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
@@ -1506,6 +1512,7 @@ namespace StaKoTecHomeGear
                                 Logging.WriteLog(LogLevel.Debug, "[aX -> HomeGear]: " + parentInstance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                 SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender)); 
                                 _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
+                                variableExists = true;
                             }
                         }
                         else if (type == "C")
@@ -1516,9 +1523,16 @@ namespace StaKoTecHomeGear
                                 SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                 AddConfigChannelChanged(parentInstance, channelIndex); 
                                 _varConverter.SetHomeGearVariable(channel.Config[name], sender);
+                                variableExists = true;
                             }
                         }
                     }
+                }
+
+                if (!variableExists)
+                {
+                    Logging.WriteLog(LogLevel.Info, "Variable " + sender.Path + " ist nicht für Homegear relevont - wird ab jetzt ignoriert!");
+                    _ignoredVariableChanged.Add(sender.Path);
                 }
                 _homegearDevicesMutex.ReleaseMutex();
             }
@@ -1551,6 +1565,9 @@ namespace StaKoTecHomeGear
             if ((sender.Name == "Lifetick") || (sender.Name == "DataValid") || (sender.Name == "RSSI") || (sender.Name == "Status") || (sender.Name == "err") || (sender.Name == "LastChange"))
                 return;
 
+            if (_ignoredVariableChanged.Contains(sender.Path))  //Variablen die nicht in den Homegear-Devices vorkommen, werden einmal registriert und dann nie mehr ausgewertet
+                return;
+
             try
             {
                 if (sender == null || sender.Instance == null)
@@ -1569,6 +1586,7 @@ namespace StaKoTecHomeGear
                     Thread.Sleep(10);
                 }
 
+                Boolean variableExists = false;
                 if(_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
                 {
                     Logging.WriteLog(LogLevel.Debug, "aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
@@ -1580,9 +1598,12 @@ namespace StaKoTecHomeGear
                     if (sender.Name == "InterfaceID")
                     {
                         //aktDevice.Interface.ID = sender.GetString();
+                        variableExists = true;
                     }
                     else if (sender.Name == "SetConfigValues")
                     {
+                        variableExists = true;
+
                         if (!sender.GetBool())
                         {
                             _homegearDevicesMutex.ReleaseMutex();
@@ -1610,6 +1631,11 @@ namespace StaKoTecHomeGear
                         if (sender.Instance.VariableExists("ConfigValuesChanged"))
                             sender.Instance.Get("ConfigValuesChanged").Set(false);
                     }
+                    else if (sender.Name == "Name")
+                    {
+                        aktDevice.Name = sender.Instance.Get("Name").GetString();
+                        variableExists = true;
+                    }
                     else if (_varConverter.ParseAXVariable(sender, out name, out type, out channelIndex)) 
                     {
                         if (aktDevice.Channels.ContainsKey(channelIndex))
@@ -1622,6 +1648,7 @@ namespace StaKoTecHomeGear
                                     Logging.WriteLog(LogLevel.Debug, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
+                                    variableExists = true;
                                 }
                             }
                             else if (type == "C")
@@ -1632,14 +1659,16 @@ namespace StaKoTecHomeGear
                                     SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     AddConfigChannelChanged(sender.Instance, channelIndex);
                                     _varConverter.SetHomeGearVariable(channel.Config[name], sender);
+                                    variableExists = true;
                                 }
                             }
                         }
                     }
-                    else if (sender.Name == "Name")
-                    {
-                        aktDevice.Name = sender.Instance.Get("Name").GetString();
-                    }
+                }
+                if (!variableExists)
+                {
+                    Logging.WriteLog(LogLevel.Info, "Variable " + sender.Path + " ist nicht für Homegear relevont - wird ab jetzt ignoriert!");
+                    _ignoredVariableChanged.Add(sender.Path);
                 }
                 _homegearDevicesMutex.ReleaseMutex();
                 _instances.MutexLocked = false;
@@ -1679,10 +1708,12 @@ namespace StaKoTecHomeGear
                 _initCompleted = false;
 
                 Logging.WriteLog(LogLevel.Info, "SPS-ID Changed! Triggering Init!");
-                AXVariable init = _mainInstance.Get("Init");
-                init.Set(true);
-                init_ValueChanged(init);
-                System.Diagnostics.Debug.WriteLine("SPS-ID change end");
+                Dispose();  //Als Pflaster, da beim Init dead-locks entstehen können... Moin
+
+                //AXVariable init = _mainInstance.Get("Init");
+                //init.Set(true);
+                //init_ValueChanged(init);
+                //System.Diagnostics.Debug.WriteLine("SPS-ID change end");
             }
             catch (Exception ex)
             {

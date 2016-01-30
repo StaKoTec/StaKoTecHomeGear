@@ -18,8 +18,9 @@ namespace StaKoTecHomeGear
 
             string instance = args[0];
 
+            String version = "0.3";
             App app = new App();
-            app.Run(instance);
+            app.Run(instance, version);
         }
     }
 }
