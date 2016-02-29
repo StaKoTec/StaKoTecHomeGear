@@ -59,16 +59,16 @@ namespace StaKoTecHomeGear
             mutexIsLocked = true;
             try
             {
-                Logging.WriteLog(LogLevel.Debug, "Lösche instanzen-handles");
+                Logging.WriteLog(LogLevel.Debug, "", "Lösche instanzen-handles");
                 Clear(false);
 
                 //////////////////////////////////////////////////////////////
                 // Alle Instanzen im aX nach ihrer ID abfragen und in Homegear.Devices suchen
-                Logging.WriteLog(LogLevel.Debug, "Hole alle HomeGear-Klassen");
+                Logging.WriteLog(LogLevel.Debug, "", "Hole alle HomeGear-Klassen");
                 List<String> homegearClasses = getHomeGearClasses();
                 Dictionary<String, List<String>> homegearInstances = getHomeGearInstances(homegearClasses);
                 List<AXInstance> instancesToDispose = new List<AXInstance>();
-                Logging.WriteLog(LogLevel.Debug, "Ab geht die Party");
+                Logging.WriteLog(LogLevel.Debug, "", "Ab geht die Party");
                 _polledVariablesCount = 0;
 
                 foreach (KeyValuePair<String, List<String>> aktInstancePair in homegearInstances)

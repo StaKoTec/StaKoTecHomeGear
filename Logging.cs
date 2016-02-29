@@ -24,20 +24,23 @@ namespace StaKoTecHomeGear
             _logWriter.AutoFlush = true;
         }
 
-        public static void WriteLog(LogLevel logLevel, String message, String stackTrace = "", Boolean setError = false)
+        public static void WriteLog(LogLevel logLevel, String instanceName, String message, String stackTrace = "", Boolean setError = false)
         {
             try
             {
                 if ((logLevel > (LogLevel)_mainInstance.Get("LogLevel").GetLongInteger()) && !(logLevel == LogLevel.Always))
                     return;
 
-                _logWriter.WriteLine(DateTime.Now.ToString() + "." + DateTime.Now.Millisecond.ToString("D3") + ": " + message);
+                if (instanceName == "")
+                    instanceName = _mainInstance.Name;
 
-                _aX.WriteJournal(0, _mainInstance.Name, message, "ON", _mainInstance.Name);
+                _logWriter.WriteLine(DateTime.Now.ToString() + "." + DateTime.Now.Millisecond.ToString("D3") + ": (" + instanceName + ") " + message);
+
+                _aX.WriteJournal(0, instanceName, message, "ON", _mainInstance.Name);
                 Console.WriteLine(message);
                 if (stackTrace.Length > 0)
                 {
-                    _aX.WriteJournal(0, _mainInstance.Name, stackTrace, "ON", _mainInstance.Name);
+                    _aX.WriteJournal(0, instanceName, stackTrace, "ON", _mainInstance.Name);
                     Console.WriteLine(stackTrace);
                     _logWriter.WriteLine(DateTime.Now.ToString() + "." + DateTime.Now.Millisecond.ToString("D3") + ": " + stackTrace);
                 }
