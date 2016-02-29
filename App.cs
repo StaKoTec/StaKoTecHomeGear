@@ -2105,7 +2105,7 @@ namespace StaKoTecHomeGear
                         {
                             _varConverter.SetAXVariable(aktAXVar, variable);
                             setDeviceStatusInMaininstance(variable, deviceID);
-                            Logging.WriteLog(LogLevel.Debug, aktAXVar.Instance.Name, "[HomeGear -> aX]: " + aktAXVar.Path + " = " + variable.ToString());
+                            Logging.WriteLog(LogLevel.Debug, aktAXVar.Path, "[HomeGear -> aX]: " + aktAXVar.Path + " = " + variable.ToString());
                         }
                         SetLastChange(instanz, varName + " = " + variable.ToString());
                     }
@@ -2116,7 +2116,7 @@ namespace StaKoTecHomeGear
                         {
                             _varConverter.SetAXVariable(aktAXVar2, variable);
                             setDeviceStatusInMaininstance(variable, deviceID);
-                            Logging.WriteLog(LogLevel.Debug, aktAXVar2.Instance.Name, "[HomeGear -> aX]: " + aktAXVar2.Path + " = " + variable.ToString());
+                            Logging.WriteLog(LogLevel.Debug, aktAXVar2.Path, "[HomeGear -> aX]: " + aktAXVar2.Path + " = " + variable.ToString());
                         }
                         SetLastChange(instanz, subinstance + "." + variable.Name + " = " + variable.ToString());
                     }
