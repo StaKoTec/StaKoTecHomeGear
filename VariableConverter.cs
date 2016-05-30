@@ -56,11 +56,11 @@ namespace StaKoTecHomeGear
                 {
                     defaultVar = aktVar.DefaultInteger.ToString();
                     typ = "ENUM (DINT) {";
-                    for (int i = 0; i < aktVar.ValueList.Length; i++)
+                    foreach(KeyValuePair<int, String> aktPair in aktVar.ValueList)
                     {
-                        if (aktVar.ValueList[i] == "")
+                        if (aktPair.Value == "")
                             continue;
-                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                        typ += "(" + aktPair.Key.ToString() + ": " + aktPair.Value + "), ";
                     }
                     typ += "}";
                 }
@@ -122,11 +122,11 @@ namespace StaKoTecHomeGear
                 {
                     defaultVar = aktVar.DefaultInteger.ToString();
                     typ = "ENUM (DINT) {";
-                    for (int i = 0; i < aktVar.ValueList.Length; i++)
+                    foreach (KeyValuePair<int, String> aktPair in aktVar.ValueList)
                     {
-                        if (aktVar.ValueList[i] == "")
+                        if (aktPair.Value == "")
                             continue;
-                        typ += "(" + i.ToString() + ": " + aktVar.ValueList[i] + ")" + ((i == aktVar.ValueList.Length - 1) ? "" : ",");
+                        typ += "(" + aktPair.Key.ToString() + ": " + aktPair.Value + "), ";
                     }
                     typ += "}";
                 }
