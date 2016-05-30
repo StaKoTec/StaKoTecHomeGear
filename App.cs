@@ -1404,14 +1404,20 @@ namespace StaKoTecHomeGear
                         foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
                         {
                             var aktVar = Wert.Value;
-                            if ((aktVar.Type == VariableType.tAction) || (!aktVar.Writeable))  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
+                            if (!aktVar.Writeable)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
                                 continue;
+                            
                             String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
                             if (aktInstanz.VariableExists(aktVarName))
                             {
                                 AXVariable aktAXVar = aktInstanz.Get(aktVarName);
                                 if (aktAXVar != null)
                                 {
+                                    if (aktVar.Type == VariableType.tAction)
+                                    {
+                                        aktAXVar.Set(false);
+                                        continue;
+                                    }
                                     _varConverter.SetAXVariable(aktAXVar, aktVar);
                                     setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
                                 }
@@ -1422,6 +1428,11 @@ namespace StaKoTecHomeGear
                                 AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
                                 if (aktAXVar2 != null)
                                 {
+                                    if (aktVar.Type == VariableType.tAction)
+                                    {
+                                        aktAXVar2.Set(false);
+                                        continue;
+                                    }
                                     _varConverter.SetAXVariable(aktAXVar2, aktVar);
                                     setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
                                 }
@@ -1508,6 +1519,8 @@ namespace StaKoTecHomeGear
                                 SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender)); 
                                 _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
                                 variableExists = true;
+                                if (channel.Variables[name].Type == VariableType.tAction)  //Action Variablen sofort wieder rücksetzen
+                                    sender.Set(false);
                             }
                         }
                         else if (type == "C")
@@ -1644,6 +1657,8 @@ namespace StaKoTecHomeGear
                                     SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
                                     _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
                                     variableExists = true;
+                                    if (channel.Variables[name].Type == VariableType.tAction)  //Action Variablen sofort wieder rücksetzen
+                                        sender.Set(false);
                                 }
                             }
                             else if (type == "C")
