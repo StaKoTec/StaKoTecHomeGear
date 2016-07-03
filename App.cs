@@ -392,23 +392,14 @@ namespace StaKoTecHomeGear
 
                             //Firmwareupgrades prüfen
                             _homegearDevicesMutex.WaitOne();
-                            while (_instances.mutexIsLocked)
+                            lock (_instances._mutex)
                             {
-                                Logging.WriteLog(LogLevel.Debug, "", "checkFirmwareUpdates waiting for getting _instances-Mutex");
-                                Thread.Sleep(10);
-                            }
-                            _instances.MutexLocked = true;
-                            while (!_instances.mutexIsLocked)
-                            {
-                                Logging.WriteLog(LogLevel.Debug, "", "checkFirmwareUpdates waiting for getting _instances-Mutex");
-                                Thread.Sleep(10);
-                            }
-                            foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
-                            {
-                                deviceCheckFirmwareUpdates(aktInstance.Key);
+                                foreach (KeyValuePair<Int32, AXInstance> aktInstance in _instances)
+                                {
+                                    deviceCheckFirmwareUpdates(aktInstance.Key);
+                                }
                             }
                             _homegearDevicesMutex.ReleaseMutex();
-                            _instances.MutexLocked = false;
                         }
                         //Logging.WriteLog("Cycle-Dauer: " + (lastCycletime).ToString() + "s");
                         j++;
@@ -891,142 +882,130 @@ namespace StaKoTecHomeGear
 
         void getDeviceVars_ValueChanged(AXVariable sender)
         {
-            try
-            {
-                _deviceVars_DeviceID = _mainInstance.Get("ActionID").GetLongInteger();
-
-                UInt16 x = 0;
-
-                _homegearDevicesMutex.WaitOne();
-                while (_instances.mutexIsLocked)
-                {
-                    Logging.WriteLog(LogLevel.Debug, "", "getDeviceVars_ValueChanged waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-                _instances.MutexLocked = true;
-                while (!_instances.mutexIsLocked)
-                {
-                    Logging.WriteLog(LogLevel.Debug, "", "getDeviceVars_ValueChanged waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-
-                if (_homegear.Devices.ContainsKey(_deviceVars_DeviceID))
-                {
-                    Device aktDevice = _homegear.Devices[_deviceVars_DeviceID];
-                    foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
-                    {
-                        if (sender.Name == "GetDeviceConfigVars")
-                        {
-                            sender.Instance.Status = "Get VariableConfigNames for DeviceID: " + _deviceVars_DeviceID.ToString();
-                            foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
-                            {
-                                if (x >= _deviceVars_Name.Length)
-                                {
-                                    _mainInstance.Error = "Array-Index zu klein bei 'DeviceVars_Name'";
-                                    Logging.WriteLog(LogLevel.Error, "", "Array-Index zu klein bei 'DeviceVars_Name'");
-                                    _homegearDevicesMutex.ReleaseMutex();
-                                    _instances.MutexLocked = false;
-                                    return;
-                                }
-
-                                var aktVar = configName.Value;
-                                String minVar = "";
-                                String maxVar = "";
-                                String typ = "";
-                                String defaultVar = "";
-                                String actualVar = "";
-                                String rwVar = "";
-                                String varOK = findVarInClass(_deviceVars_DeviceID, aktVar.Name, aktVar.Type, "C", aktChannel.Key.ToString("D2"));
-
-                                _varConverter.ParseDeviceConfigVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
-
-                                actualVar = _varConverter.HomegearVarToString(aktVar);
-                                _deviceVars_Name.Set(x, aktVar.Name + "_C" + aktChannel.Key.ToString("D2"));
-                                _deviceVars_Type.Set(x, typ);
-                                _deviceVars_Min.Set(x, minVar);
-                                _deviceVars_Max.Set(x, maxVar);
-                                _deviceVars_Default.Set(x, defaultVar);
-                                _deviceVars_Actual.Set(x, actualVar);
-                                _deviceVars_RW.Set(x, rwVar);
-                                _deviceVars_Unit.Set(x, aktVar.Unit);
-                                _deviceVars_VarVorhanden.Set(x, varOK);
-                                x++;
-                            }
-                        }
-
-                        if (sender.Name == "GetDeviceVars")
-                        {
-                            sender.Instance.Status = "Get VariableNames for DeviceID: " + _deviceVars_DeviceID.ToString();
-                            foreach (KeyValuePair<String, Variable> varName in aktDevice.Channels[aktChannel.Key].Variables)
-                            {
-                                if (x >= _deviceVars_Name.Length)
-                                {
-                                    _mainInstance.Error = "Array-Index zu klein bei 'DeviceVars_Name'";
-                                    Logging.WriteLog(LogLevel.Error, "", "Array-Index zu klein bei 'DeviceVars_Name'");
-                                    _homegearDevicesMutex.ReleaseMutex();
-                                    _instances.MutexLocked = false;
-                                    return;
-                                }
-
-                                var aktVar = varName.Value;
-                                String minVar = "";
-                                String maxVar = "";
-                                String typ = "";
-                                String defaultVar = "";
-                                String actualVar = "";
-                                String rwVar = "";
-                                String varOK = findVarInClass(_deviceVars_DeviceID, aktVar.Name, aktVar.Type, "V", aktChannel.Key.ToString("D2"));
-                                _varConverter.ParseDeviceVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
-
-                                actualVar = _varConverter.HomegearVarToString(aktVar);
-                                _deviceVars_Name.Set(x, aktVar.Name + "_V" + aktChannel.Key.ToString("D2"));
-                                _deviceVars_Type.Set(x, typ);
-                                _deviceVars_Min.Set(x, minVar);
-                                _deviceVars_Max.Set(x, maxVar);
-                                _deviceVars_Default.Set(x, defaultVar);
-                                _deviceVars_Actual.Set(x, actualVar);
-                                _deviceVars_RW.Set(x, rwVar);
-                                _deviceVars_Unit.Set(x, aktVar.Unit);
-                                _deviceVars_VarVorhanden.Set(x, varOK);
-                                x++;
-                            }
-                        }
-                    }
-
-                    for (; x < _deviceVars_Name.Length; x++)
-                    {
-                        _deviceVars_Name.Set(x, "");
-                        _deviceVars_Type.Set(x, "");
-                        _deviceVars_Min.Set(x, "");
-                        _deviceVars_Max.Set(x, "");
-                        _deviceVars_Default.Set(x, "");
-                        _deviceVars_Actual.Set(x, "");
-                        _deviceVars_RW.Set(x, "");
-                        _deviceVars_Unit.Set(x, "");
-                        _deviceVars_VarVorhanden.Set(x, "");
-                    }
-                }
-                _homegearDevicesMutex.ReleaseMutex();
-                _instances.MutexLocked = false;
-            }
-            catch (Exception ex)
-            {
-                try { _homegearDevicesMutex.ReleaseMutex(); }
-                catch (Exception) { }
-                _instances.MutexLocked = false;
-                sender.Instance.Error = ex.Message;
-                sender.Instance.Status = ex.Message;
-                Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
-            }
-            finally
+            lock (_instances._mutex)
             {
                 try
                 {
-                    sender.Set(false);
+                    _deviceVars_DeviceID = _mainInstance.Get("ActionID").GetLongInteger();
+
+                    UInt16 x = 0;
+
+                    _homegearDevicesMutex.WaitOne();
+
+                    if (_homegear.Devices.ContainsKey(_deviceVars_DeviceID))
+                    {
+                        Device aktDevice = _homegear.Devices[_deviceVars_DeviceID];
+                        foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
+                        {
+                            if (sender.Name == "GetDeviceConfigVars")
+                            {
+                                sender.Instance.Status = "Get VariableConfigNames for DeviceID: " + _deviceVars_DeviceID.ToString();
+                                foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
+                                {
+                                    if (x >= _deviceVars_Name.Length)
+                                    {
+                                        _mainInstance.Error = "Array-Index zu klein bei 'DeviceVars_Name'";
+                                        Logging.WriteLog(LogLevel.Error, "", "Array-Index zu klein bei 'DeviceVars_Name'");
+                                        _homegearDevicesMutex.ReleaseMutex();
+                                        return;
+                                    }
+
+                                    var aktVar = configName.Value;
+                                    String minVar = "";
+                                    String maxVar = "";
+                                    String typ = "";
+                                    String defaultVar = "";
+                                    String actualVar = "";
+                                    String rwVar = "";
+                                    String varOK = findVarInClass(_deviceVars_DeviceID, aktVar.Name, aktVar.Type, "C", aktChannel.Key.ToString("D2"));
+
+                                    _varConverter.ParseDeviceConfigVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
+
+                                    actualVar = _varConverter.HomegearVarToString(aktVar);
+                                    _deviceVars_Name.Set(x, aktVar.Name + "_C" + aktChannel.Key.ToString("D2"));
+                                    _deviceVars_Type.Set(x, typ);
+                                    _deviceVars_Min.Set(x, minVar);
+                                    _deviceVars_Max.Set(x, maxVar);
+                                    _deviceVars_Default.Set(x, defaultVar);
+                                    _deviceVars_Actual.Set(x, actualVar);
+                                    _deviceVars_RW.Set(x, rwVar);
+                                    _deviceVars_Unit.Set(x, aktVar.Unit);
+                                    _deviceVars_VarVorhanden.Set(x, varOK);
+                                    x++;
+                                }
+                            }
+
+                            if (sender.Name == "GetDeviceVars")
+                            {
+                                sender.Instance.Status = "Get VariableNames for DeviceID: " + _deviceVars_DeviceID.ToString();
+                                foreach (KeyValuePair<String, Variable> varName in aktDevice.Channels[aktChannel.Key].Variables)
+                                {
+                                    if (x >= _deviceVars_Name.Length)
+                                    {
+                                        _mainInstance.Error = "Array-Index zu klein bei 'DeviceVars_Name'";
+                                        Logging.WriteLog(LogLevel.Error, "", "Array-Index zu klein bei 'DeviceVars_Name'");
+                                        _homegearDevicesMutex.ReleaseMutex();
+                                        return;
+                                    }
+
+                                    var aktVar = varName.Value;
+                                    String minVar = "";
+                                    String maxVar = "";
+                                    String typ = "";
+                                    String defaultVar = "";
+                                    String actualVar = "";
+                                    String rwVar = "";
+                                    String varOK = findVarInClass(_deviceVars_DeviceID, aktVar.Name, aktVar.Type, "V", aktChannel.Key.ToString("D2"));
+                                    _varConverter.ParseDeviceVars(aktVar, out minVar, out maxVar, out typ, out defaultVar, out rwVar);
+
+                                    actualVar = _varConverter.HomegearVarToString(aktVar);
+                                    _deviceVars_Name.Set(x, aktVar.Name + "_V" + aktChannel.Key.ToString("D2"));
+                                    _deviceVars_Type.Set(x, typ);
+                                    _deviceVars_Min.Set(x, minVar);
+                                    _deviceVars_Max.Set(x, maxVar);
+                                    _deviceVars_Default.Set(x, defaultVar);
+                                    _deviceVars_Actual.Set(x, actualVar);
+                                    _deviceVars_RW.Set(x, rwVar);
+                                    _deviceVars_Unit.Set(x, aktVar.Unit);
+                                    _deviceVars_VarVorhanden.Set(x, varOK);
+                                    x++;
+                                }
+                            }
+                        }
+
+                        for (; x < _deviceVars_Name.Length; x++)
+                        {
+                            _deviceVars_Name.Set(x, "");
+                            _deviceVars_Type.Set(x, "");
+                            _deviceVars_Min.Set(x, "");
+                            _deviceVars_Max.Set(x, "");
+                            _deviceVars_Default.Set(x, "");
+                            _deviceVars_Actual.Set(x, "");
+                            _deviceVars_RW.Set(x, "");
+                            _deviceVars_Unit.Set(x, "");
+                            _deviceVars_VarVorhanden.Set(x, "");
+                        }
+                    }
+                    _homegearDevicesMutex.ReleaseMutex();
                 }
                 catch (Exception ex)
                 {
+                    try { _homegearDevicesMutex.ReleaseMutex(); }
+                    catch (Exception) { }
+                    sender.Instance.Error = ex.Message;
+                    sender.Instance.Status = ex.Message;
                     Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
+                }
+                finally
+                {
+                    try
+                    {
+                        sender.Set(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
+                    }
                 }
             }
         }
@@ -1246,99 +1225,90 @@ namespace StaKoTecHomeGear
                 _homegearDevicesMutex.WaitOne();
                 Logging.WriteLog(LogLevel.Info, "", "Reloading Instances");
                 _instances.Reload(_homegear.Devices);
-                while (_instances.mutexIsLocked)
+                lock (_instances._mutex)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "init_ValueChanged waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-                _instances.MutexLocked = true;
-                while (!_instances.mutexIsLocked)
-                {
-                    Logging.WriteLog(LogLevel.Debug, "", "init_ValueChanged waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-                try
-                {
-                    x = 0;
-                    //Erstmal alle ColorStates löschen, damit sichtbar wird welches Device bereite geparst wurde
-                    for (x = 0; x < _deviceStateColor.Length; x++ )
-                        _deviceStateColor.Set(x, (Int16)DeviceStatus.Nichts);
-
-                    x = 0;
-                    foreach (KeyValuePair<Int32, Device> devicePair in _homegear.Devices)
+                    try
                     {
-                        if (devicePair.Key > 1000000000)  //Teams nicht anzeigen
-                            continue;
+                        x = 0;
+                        //Erstmal alle ColorStates löschen, damit sichtbar wird welches Device bereite geparst wurde
+                        for (x = 0; x < _deviceStateColor.Length; x++)
+                            _deviceStateColor.Set(x, (Int16)DeviceStatus.Nichts);
 
-                        _deviceID.Set(x, devicePair.Key);
-
-                        Logging.WriteLog(LogLevel.Debug, "", "Parse DeviceID " + devicePair.Key.ToString());
-                        if (_instances.ContainsKey(devicePair.Key))
+                        x = 0;
+                        foreach (KeyValuePair<Int32, Device> devicePair in _homegear.Devices)
                         {
-                            AXInstance aktInstanz = _instances[devicePair.Key];
-                            if (aktInstanz.ClassName == devicePair.Value.TypeString)
+                            if (devicePair.Key > 1000000000)  //Teams nicht anzeigen
+                                continue;
+
+                            _deviceID.Set(x, devicePair.Key);
+
+                            Logging.WriteLog(LogLevel.Debug, "", "Parse DeviceID " + devicePair.Key.ToString());
+                            if (_instances.ContainsKey(devicePair.Key))
                             {
-                                _deviceTypeString.Set(x, devicePair.Value.TypeString);
-                                _deviceInstance.Set(x, aktInstanz.Name);
-                                if (aktInstanz.Remark.Trim() != "")
-                                    _deviceRemark.Set(x, aktInstanz.Remark);
-                                else if (devicePair.Value.Name.Trim() != "")
-                                    _deviceRemark.Set(x, "HomeGear-Name: " + devicePair.Value.Name);
-                                else
-                                    _deviceRemark.Set(x, "");
-
-                                _deviceFirmware.Set(x, deviceCheckFirmwareUpdates(devicePair.Key));
-                                try { _deviceInterface.Set(x, devicePair.Value.Interface.ID); }
-                                catch (Exception) { /* It's a virtual device - it has no interface */ }
-
-                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] : "OK");
-                                _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
-                                if (aktInstanz.VariableExists("SerialNo"))
-                                    aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
-                                if (aktInstanz.VariableExists("Name"))
-                                    aktInstanz.Get("Name").Set(devicePair.Value.Name);
-                                if (aktInstanz.VariableExists("InterfaceID"))
-                                    aktInstanz.Get("InterfaceID").Set(devicePair.Value.Interface.ID);
-
-                                //Aktuelle Config- und Statuswerte Werte auslesen
-                                if (!_firstInitDevices.Contains(devicePair.Key))
+                                AXInstance aktInstanz = _instances[devicePair.Key];
+                                if (aktInstanz.ClassName == devicePair.Value.TypeString)
                                 {
-                                    _getActualDeviceDataDictionary.Add(devicePair.Value, aktInstanz);
-                                    _firstInitDevices.Add(devicePair.Key);
-                                }
+                                    _deviceTypeString.Set(x, devicePair.Value.TypeString);
+                                    _deviceInstance.Set(x, aktInstanz.Name);
+                                    if (aktInstanz.Remark.Trim() != "")
+                                        _deviceRemark.Set(x, aktInstanz.Remark);
+                                    else if (devicePair.Value.Name.Trim() != "")
+                                        _deviceRemark.Set(x, "HomeGear-Name: " + devicePair.Value.Name);
+                                    else
+                                        _deviceRemark.Set(x, "");
 
-                                aktInstanz.Get("ConfigValuesChanged").Set(false);
-                                _instances.Lifetick();
-                                _mainInstance.Get("Lifetick").Set(true);
-                                Thread.Sleep(1);
+                                    _deviceFirmware.Set(x, deviceCheckFirmwareUpdates(devicePair.Key));
+                                    try { _deviceInterface.Set(x, devicePair.Value.Interface.ID); }
+                                    catch (Exception) { /* It's a virtual device - it has no interface */ }
+
+                                    _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.OK) ? _deviceStatusText[DeviceStatus.OK] : "OK");
+                                    _deviceStateColor.Set(x, (Int16)DeviceStatus.OK);
+                                    if (aktInstanz.VariableExists("SerialNo"))
+                                        aktInstanz.Get("SerialNo").Set(devicePair.Value.SerialNumber);
+                                    if (aktInstanz.VariableExists("Name"))
+                                        aktInstanz.Get("Name").Set(devicePair.Value.Name);
+                                    if (aktInstanz.VariableExists("InterfaceID"))
+                                        aktInstanz.Get("InterfaceID").Set(devicePair.Value.Interface.ID);
+
+                                    //Aktuelle Config- und Statuswerte Werte auslesen
+                                    if (!_firstInitDevices.Contains(devicePair.Key))
+                                    {
+                                        _getActualDeviceDataDictionary.Add(devicePair.Value, aktInstanz);
+                                        _firstInitDevices.Add(devicePair.Key);
+                                    }
+
+                                    aktInstanz.Get("ConfigValuesChanged").Set(false);
+                                    _instances.Lifetick();
+                                    _mainInstance.Get("Lifetick").Set(true);
+                                    Thread.Sleep(1);
+                                }
+                                else  //if (classnames[devicePair.Key] == devicePair.Value.TypeString)
+                                {
+                                    _deviceTypeString.Set(x, devicePair.Value.TypeString);
+                                    _deviceInstance.Set(x, "");
+                                    _deviceRemark.Set(x, "");
+                                    _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.Fehler) ? _deviceStatusText[DeviceStatus.Fehler].Replace("%s", aktInstanz.ClassName) : "Falsche Klasse! (" + aktInstanz.ClassName + ")");
+                                    _deviceStateColor.Set(x, (Int16)DeviceStatus.Fehler);
+                                    _instances.Remove(devicePair.Key, false);
+                                }
                             }
-                            else  //if (classnames[devicePair.Key] == devicePair.Value.TypeString)
+                            else
                             {
                                 _deviceTypeString.Set(x, devicePair.Value.TypeString);
                                 _deviceInstance.Set(x, "");
                                 _deviceRemark.Set(x, "");
-                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.Fehler) ? _deviceStatusText[DeviceStatus.Fehler].Replace("%s", aktInstanz.ClassName) : "Falsche Klasse! (" + aktInstanz.ClassName + ")");
-                                _deviceStateColor.Set(x, (Int16)DeviceStatus.Fehler);
-                                _instances.Remove(devicePair.Key, false);
+                                _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.KeineInstanzVorhanden) ? _deviceStatusText[DeviceStatus.KeineInstanzVorhanden] : "Keine Instanz gefunden");
+                                _deviceStateColor.Set(x, (Int16)DeviceStatus.KeineInstanzVorhanden);
                             }
+                            x++;
                         }
-                        else
-                        {
-                            _deviceTypeString.Set(x, devicePair.Value.TypeString);
-                            _deviceInstance.Set(x, "");
-                            _deviceRemark.Set(x, "");
-                            _deviceState.Set(x, _deviceStatusText.ContainsKey(DeviceStatus.KeineInstanzVorhanden) ? _deviceStatusText[DeviceStatus.KeineInstanzVorhanden] : "Keine Instanz gefunden");
-                            _deviceStateColor.Set(x, (Int16)DeviceStatus.KeineInstanzVorhanden);
-                        }
-                        x++;
                     }
+                    catch (Exception ex)
+                    {
+                        Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
+                    }
+                    _instances.mutexIsLocked = false;
                 }
-                catch (Exception ex)
-                {
-                    Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
-                }
-                _instances.MutexLocked = false;
-
                 for (; x < _deviceID.Length; x++)
                 {
                     _deviceID.Set(x, 0);
@@ -1378,104 +1348,94 @@ namespace StaKoTecHomeGear
 
         void getActualDeviceData()
         {
-            try
+
+            lock (_instances._mutex)
             {
-                _homegearDevicesMutex.WaitOne();
-                while (_instances.mutexIsLocked)
+                try
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "getActualDeviceData waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-                _instances.MutexLocked = true;
-                while (!_instances.mutexIsLocked)
-                {
-                    Logging.WriteLog(LogLevel.Debug, "", "getActualDeviceData waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-
-                foreach (KeyValuePair<Device, AXInstance> aktPair in _getActualDeviceDataDictionary)
-                {
-                    Device aktDevice = aktPair.Key;
-                    AXInstance aktInstanz = aktPair.Value;
-
-                    Logging.WriteLog(LogLevel.Debug, "", "Hole aktuelle Variablen von Device " + aktDevice.ID.ToString() + " (" + aktDevice.Name + ")");
-                    foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
+                    _homegearDevicesMutex.WaitOne();
+                    foreach (KeyValuePair<Device, AXInstance> aktPair in _getActualDeviceDataDictionary)
                     {
-                        foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
-                        {
-                            var aktVar = Wert.Value;
-                            if (!aktVar.Writeable)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
-                                continue;
-                            
-                            String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
-                            if (aktInstanz.VariableExists(aktVarName))
-                            {
-                                AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                                if (aktAXVar != null)
-                                {
-                                    if (aktVar.Type == VariableType.tAction)
-                                    {
-                                        aktAXVar.Set(false);
-                                        continue;
-                                    }
-                                    _varConverter.SetAXVariable(aktAXVar, aktVar);
-                                    setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
-                                }
-                            }
-                            String subinstance = "V" + aktChannel.Key.ToString("D2");
-                            if (aktInstanz.SubinstanceExists(subinstance))
-                            {
-                                AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                                if (aktAXVar2 != null)
-                                {
-                                    if (aktVar.Type == VariableType.tAction)
-                                    {
-                                        aktAXVar2.Set(false);
-                                        continue;
-                                    }
-                                    _varConverter.SetAXVariable(aktAXVar2, aktVar);
-                                    setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
-                                }
-                            }
-                        }
+                        Device aktDevice = aktPair.Key;
+                        AXInstance aktInstanz = aktPair.Value;
 
-                        foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
+                        Logging.WriteLog(LogLevel.Debug, "", "Hole aktuelle Variablen von Device " + aktDevice.ID.ToString() + " (" + aktDevice.Name + ")");
+                        foreach (KeyValuePair<Int32, Channel> aktChannel in aktDevice.Channels)
                         {
-                            var aktVar = configName.Value;
-                            String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
-                            if (aktInstanz.VariableExists(aktVarName))
+                            foreach (KeyValuePair<String, Variable> Wert in aktDevice.Channels[aktChannel.Key].Variables)
                             {
-                                AXVariable aktAXVar = aktInstanz.Get(aktVarName);
-                                if (aktAXVar != null)
+                                var aktVar = Wert.Value;
+                                if (!aktVar.Writeable)  //Action-Variablen nicht beim Init auslesen (Wie z.B. PRESS_SHORT oder so), da HomeGear speichert, dass die Variable irgendwann mal auf 1 war und somit immer beim warmstart alle bisher gedrückten Taster noch einmal auf 1 gesetzt werden
+                                    continue;
+
+                                String aktVarName = aktVar.Name + "_V" + aktChannel.Key.ToString("D2");
+                                if (aktInstanz.VariableExists(aktVarName))
                                 {
-                                    _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                    AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                                    if (aktAXVar != null)
+                                    {
+                                        if (aktVar.Type == VariableType.tAction)
+                                        {
+                                            aktAXVar.Set(false);
+                                            continue;
+                                        }
+                                        _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                        setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                                    }
+                                }
+                                String subinstance = "V" + aktChannel.Key.ToString("D2");
+                                if (aktInstanz.SubinstanceExists(subinstance))
+                                {
+                                    AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                                    if (aktAXVar2 != null)
+                                    {
+                                        if (aktVar.Type == VariableType.tAction)
+                                        {
+                                            aktAXVar2.Set(false);
+                                            continue;
+                                        }
+                                        _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                                        setDeviceStatusInMaininstance(aktVar, aktDevice.ID);
+                                    }
                                 }
                             }
-                            String subinstance = "C" + aktChannel.Key.ToString("D2");
-                            if (aktInstanz.SubinstanceExists(subinstance))
+
+                            foreach (KeyValuePair<String, ConfigParameter> configName in aktDevice.Channels[aktChannel.Key].Config)
                             {
-                                AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
-                                if (aktAXVar2 != null)
+                                var aktVar = configName.Value;
+                                String aktVarName = aktVar.Name + "_C" + aktChannel.Key.ToString("D2");
+                                if (aktInstanz.VariableExists(aktVarName))
                                 {
-                                    _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                                    AXVariable aktAXVar = aktInstanz.Get(aktVarName);
+                                    if (aktAXVar != null)
+                                    {
+                                        _varConverter.SetAXVariable(aktAXVar, aktVar);
+                                    }
+                                }
+                                String subinstance = "C" + aktChannel.Key.ToString("D2");
+                                if (aktInstanz.SubinstanceExists(subinstance))
+                                {
+                                    AXVariable aktAXVar2 = aktInstanz.GetSubinstance(subinstance).Get(aktVar.Name);
+                                    if (aktAXVar2 != null)
+                                    {
+                                        _varConverter.SetAXVariable(aktAXVar2, aktVar);
+                                    }
                                 }
                             }
                         }
                     }
+                    _homegearDevicesMutex.ReleaseMutex();
+                    _initCompleted = true;
+                    Logging.WriteLog(LogLevel.Info, "", "Init Devices completed");
                 }
-                _homegearDevicesMutex.ReleaseMutex();
-                _instances.MutexLocked = false;
-                _initCompleted = true;
-                Logging.WriteLog(LogLevel.Info, "", "Init Devices completed");
-            }
-            catch (Exception ex)
-            {
-                _mainInstance.Error = ex.Message;
-                Logging.WriteLog(LogLevel.Info, ex.Message, ex.StackTrace);
-                _homegearDevicesMutex.ReleaseMutex();
-                _instances.MutexLocked = false;
-                _initCompleted = true;
-                Logging.WriteLog(LogLevel.Info, "", "Init Devices completed");
+                catch (Exception ex)
+                {
+                    _mainInstance.Error = ex.Message;
+                    Logging.WriteLog(LogLevel.Info, ex.Message, ex.StackTrace);
+                    _homegearDevicesMutex.ReleaseMutex();
+                    _initCompleted = true;
+                    Logging.WriteLog(LogLevel.Info, "", "Init Devices completed");
+                }
             }
         }
 
@@ -1576,129 +1536,119 @@ namespace StaKoTecHomeGear
             if (_ignoredVariableChanged.Contains(sender.Path))  //Variablen die nicht in den Homegear-Devices vorkommen, werden einmal registriert und dann nie mehr ausgewertet
                 return;
 
-            try
-            {
-                if (sender == null || sender.Instance == null)
-                    return;
-                
-                _homegearDevicesMutex.WaitOne();
-                while (_instances.mutexIsLocked)
-                {
-                    Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "OnInstanceVariableValueChanged waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-                _instances.MutexLocked = true;
-                while (!_instances.mutexIsLocked)
-                {
-                    Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "OnInstanceVariableValueChanged waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
-                }
-
-                Boolean variableExists = false;
-                if(_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
-                {
-                    Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
-                    Device aktDevice = _homegear.Devices[sender.Instance.Get("ID").GetLongInteger()];
-                    String name;
-                    String type;
-                    Int32 channelIndex;
-
-                    if (sender.Name == "InterfaceID")
-                    {
-                        //aktDevice.Interface.ID = sender.GetString();
-                        variableExists = true;
-                    }
-                    else if (sender.Name == "SetConfigValues")
-                    {
-                        variableExists = true;
-
-                        if (!sender.GetBool())
-                        {
-                            _homegearDevicesMutex.ReleaseMutex();
-                            _instances.MutexLocked = false;
-                            return;
-                        }
-
-                        if (_instancesConfigChannels.ContainsKey(sender.Instance.Name))
-                        {
-                            //Muss Device, List<Int32> statt Device, int32 sein, da meherer Kanäle pro Gerät!!!!!
-                            Dictionary<Device, List<Int32>> configToPush = new Dictionary<Device, List<Int32>>();
-                            configToPush.Add(aktDevice, new List<Int32>());
-                            foreach (Int32 aktChannel in _instancesConfigChannels[sender.Instance.Name])
-                            {
-                                if (aktDevice.Channels.ContainsKey(aktChannel))
-                                    configToPush[aktDevice].Add(aktChannel);
-                            }
-                            Dictionary<AXInstance, Dictionary<Device, List<Int32>>> queueAdd = new Dictionary<AXInstance, Dictionary<Device, List<Int32>>>();
-                            queueAdd.Add(sender.Instance, configToPush);
-                            _queueConfigToPushMutex.WaitOne();
-                            _queueConfigToPush.Enqueue(queueAdd);
-                            _queueConfigToPushMutex.ReleaseMutex();
-                            _instancesConfigChannels.Remove(sender.Instance.Name);
-                        }
-                        if (sender.Instance.VariableExists("ConfigValuesChanged"))
-                            sender.Instance.Get("ConfigValuesChanged").Set(false);
-                    }
-                    else if (sender.Name == "Name")
-                    {
-                        aktDevice.Name = sender.Instance.Get("Name").GetString();
-                        variableExists = true;
-                    }
-                    else if (_varConverter.ParseAXVariable(sender, out name, out type, out channelIndex)) 
-                    {
-                        if (aktDevice.Channels.ContainsKey(channelIndex))
-                        {
-                            Channel channel = aktDevice.Channels[channelIndex];
-                            if (type == "V")
-                            {
-                                if (channel.Variables.ContainsKey(name))
-                                {
-                                    Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
-                                    SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
-                                    _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
-                                    variableExists = true;
-                                    if (channel.Variables[name].Type == VariableType.tAction)  //Action Variablen sofort wieder rücksetzen
-                                        sender.Set(false);
-                                }
-                            }
-                            else if (type == "C")
-                            {
-                                if (channel.Config.ContainsKey(name))
-                                {
-                                    Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
-                                    SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
-                                    AddConfigChannelChanged(sender.Instance, channelIndex);
-                                    _varConverter.SetHomeGearVariable(channel.Config[name], sender);
-                                    variableExists = true;
-                                }
-                            }
-                        }
-                    }
-                }
-                if (!variableExists)
-                {
-                    Logging.WriteLog(LogLevel.Info, sender.Instance.Name, "Variable " + sender.Path + " ist nicht für Homegear relevont - wird ab jetzt ignoriert!");
-                    _ignoredVariableChanged.Add(sender.Path);
-                }
-                _homegearDevicesMutex.ReleaseMutex();
-                _instances.MutexLocked = false;
-            }
-            catch (Exception ex)
-            {
-                try { _homegearDevicesMutex.ReleaseMutex(); } catch (Exception) { }
-                Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
-                _instances.MutexLocked = false;
-            }
-            finally
+            lock (_instances._mutex)
             {
                 try
                 {
-                    if (sender.Name == "SetConfigValues")
-                        sender.Set(false);
+                    if (sender == null || sender.Instance == null)
+                        return;
+
+                    _homegearDevicesMutex.WaitOne();
+
+                    Boolean variableExists = false;
+                    if (_homegear.Devices.ContainsKey(sender.Instance.Get("ID").GetLongInteger()))
+                    {
+                        Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "aX-Variable " + sender.Path + " has changed to: " + _varConverter.AutomationXVarToString(sender));
+                        Device aktDevice = _homegear.Devices[sender.Instance.Get("ID").GetLongInteger()];
+                        String name;
+                        String type;
+                        Int32 channelIndex;
+
+                        if (sender.Name == "InterfaceID")
+                        {
+                            //aktDevice.Interface.ID = sender.GetString();
+                            variableExists = true;
+                        }
+                        else if (sender.Name == "SetConfigValues")
+                        {
+                            variableExists = true;
+
+                            if (!sender.GetBool())
+                            {
+                                _homegearDevicesMutex.ReleaseMutex();
+                                return;
+                            }
+
+                            if (_instancesConfigChannels.ContainsKey(sender.Instance.Name))
+                            {
+                                //Muss Device, List<Int32> statt Device, int32 sein, da meherer Kanäle pro Gerät!!!!!
+                                Dictionary<Device, List<Int32>> configToPush = new Dictionary<Device, List<Int32>>();
+                                configToPush.Add(aktDevice, new List<Int32>());
+                                foreach (Int32 aktChannel in _instancesConfigChannels[sender.Instance.Name])
+                                {
+                                    if (aktDevice.Channels.ContainsKey(aktChannel))
+                                        configToPush[aktDevice].Add(aktChannel);
+                                }
+                                Dictionary<AXInstance, Dictionary<Device, List<Int32>>> queueAdd = new Dictionary<AXInstance, Dictionary<Device, List<Int32>>>();
+                                queueAdd.Add(sender.Instance, configToPush);
+                                _queueConfigToPushMutex.WaitOne();
+                                _queueConfigToPush.Enqueue(queueAdd);
+                                _queueConfigToPushMutex.ReleaseMutex();
+                                _instancesConfigChannels.Remove(sender.Instance.Name);
+                            }
+                            if (sender.Instance.VariableExists("ConfigValuesChanged"))
+                                sender.Instance.Get("ConfigValuesChanged").Set(false);
+                        }
+                        else if (sender.Name == "Name")
+                        {
+                            aktDevice.Name = sender.Instance.Get("Name").GetString();
+                            variableExists = true;
+                        }
+                        else if (_varConverter.ParseAXVariable(sender, out name, out type, out channelIndex))
+                        {
+                            if (aktDevice.Channels.ContainsKey(channelIndex))
+                            {
+                                Channel channel = aktDevice.Channels[channelIndex];
+                                if (type == "V")
+                                {
+                                    if (channel.Variables.ContainsKey(name))
+                                    {
+                                        Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                        SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel:" + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                        _varConverter.SetHomeGearVariable(channel.Variables[name], sender);
+                                        variableExists = true;
+                                        if (channel.Variables[name].Type == VariableType.tAction)  //Action Variablen sofort wieder rücksetzen
+                                            sender.Set(false);
+                                    }
+                                }
+                                else if (type == "C")
+                                {
+                                    if (channel.Config.ContainsKey(name))
+                                    {
+                                        Logging.WriteLog(LogLevel.Debug, sender.Instance.Name, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                        SetLastChange(sender.Instance, "[aX -> HomeGear]: " + sender.Instance.Name + "." + name + ", Channel: " + channelIndex.ToString() + " = " + _varConverter.AutomationXVarToString(sender));
+                                        AddConfigChannelChanged(sender.Instance, channelIndex);
+                                        _varConverter.SetHomeGearVariable(channel.Config[name], sender);
+                                        variableExists = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (!variableExists)
+                    {
+                        Logging.WriteLog(LogLevel.Info, sender.Instance.Name, "Variable " + sender.Path + " ist nicht für Homegear relevont - wird ab jetzt ignoriert!");
+                        _ignoredVariableChanged.Add(sender.Path);
+                    }
+                    _homegearDevicesMutex.ReleaseMutex();
                 }
                 catch (Exception ex)
                 {
+                    try { _homegearDevicesMutex.ReleaseMutex(); }
+                    catch (Exception) { }
                     Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
+                }
+                finally
+                {
+                    try
+                    {
+                        if (sender.Name == "SetConfigValues")
+                            sender.Set(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
+                    }
                 }
             }
         }
@@ -2000,56 +1950,38 @@ namespace StaKoTecHomeGear
 
         void _homegear_DeviceLinkConfigParameterUpdated(Homegear sender, Device device, Channel channel, Link link, ConfigParameter parameter)
         {
-            try
+            lock (_instances._mutex)
             {
-                while (_instances.mutexIsLocked)
+                try
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "_homegear_DeviceLinkConfigParameterUpdated waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
+                    Logging.WriteLog(LogLevel.Debug, "", "RPC: " + device.ID.ToString() + " " + link.RemotePeerID.ToString() + " " + link.RemoteChannel.ToString() + " " + parameter.Name + " = " + parameter.ToString());
+                    if (_instances.ContainsKey(device.ID))
+                        _instances[device.ID].Status = "Link-Parameter " + link.Name + " updated to " + link.ToString();
+                    Logging.WriteLog(LogLevel.Info, "", "Link-Parameter " + link.Name + " updated to " + link.ToString());
                 }
-                _instances.MutexLocked = true;
-                while (!_instances.mutexIsLocked)
+                catch (Exception ex)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "_homegear_DeviceLinkConfigParameterUpdated waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
+                    Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
                 }
-                Logging.WriteLog(LogLevel.Debug, "", "RPC: " + device.ID.ToString() + " " + link.RemotePeerID.ToString() + " " + link.RemoteChannel.ToString() + " " + parameter.Name + " = " + parameter.ToString());
-                if (_instances.ContainsKey(device.ID))
-                    _instances[device.ID].Status = "Link-Parameter " + link.Name + " updated to " + link.ToString();
-                Logging.WriteLog(LogLevel.Info, "", "Link-Parameter " + link.Name + " updated to " + link.ToString());
             }
-            catch (Exception ex)
-            {
-                Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
-            }
-            _instances.MutexLocked = false;
         }
 
         void _homegear_DeviceConfigParameterUpdated(Homegear sender, Device device, Channel channel, ConfigParameter parameter)
         {
-            try
+            lock (_instances._mutex)
             {
-                while (_instances.mutexIsLocked)
+                try
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "_homegear_DeviceConfigParameterUpdated waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
+                    Logging.WriteLog(LogLevel.Debug, "", "RPC: " + device.ID.ToString() + " " + parameter.Name + " = " + parameter.ToString());
+                    if (_instances.ContainsKey(device.ID))
+                        _instances[device.ID].Status = "Config-Parameter " + parameter.Name + " updated to " + parameter.ToString();
+                    Logging.WriteLog(LogLevel.Info, "", "Config-Parameter " + parameter.Name + " updated to " + parameter.ToString());
                 }
-                _instances.MutexLocked = true;
-                while (!_instances.mutexIsLocked)
+                catch (Exception ex)
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "_homegear_DeviceConfigParameterUpdated waiting for getting _instances-Mutex");
-                    Thread.Sleep(10);
+                    Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
                 }
-                Logging.WriteLog(LogLevel.Debug, "", "RPC: " + device.ID.ToString() + " " + parameter.Name + " = " + parameter.ToString());
-                if (_instances.ContainsKey(device.ID))
-                    _instances[device.ID].Status = "Config-Parameter " + parameter.Name + " updated to " + parameter.ToString();
-                Logging.WriteLog(LogLevel.Info, "", "Config-Parameter " + parameter.Name + " updated to " + parameter.ToString());
             }
-            catch (Exception ex)
-            {
-                Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
-            }
-            _instances.MutexLocked = false;
         }
 
         void setDeviceStatusInMaininstance(Variable variable, Int32 id)
@@ -2092,73 +2024,67 @@ namespace StaKoTecHomeGear
 
         void _homegear_DeviceVariableUpdated(Homegear sender, Device device, Channel channel, Variable variable)
         {
-            while (_instances.mutexIsLocked)
+            lock (_instances._mutex)
             {
-                Logging.WriteLog(LogLevel.Debug, "", "_homegear_DeviceVariableUpdated waiting for getting _instances-Mutex");
-                Thread.Sleep(10);
-            }
-            _instances.MutexLocked = true;
-            while (!_instances.mutexIsLocked)
-            {
-                Logging.WriteLog(LogLevel.Debug, "", "_homegear_DeviceVariableUpdated waiting for getting _instances-Mutex");
-                Thread.Sleep(10);
-            }
-            try
-            {
-                Int32 deviceID = device.ID;
-                String varName = variable.Name + "_V" + channel.Index.ToString("D2");
-                Logging.WriteLog(LogLevel.Debug, "", "RPC: " + deviceID.ToString() + " " + variable.Name + " = " + variable.ToString());
-                
-                if (_instances.ContainsKey(deviceID))
+                try
                 {
-                    AXInstance instanz = _instances[deviceID];
-                    String subinstance = "V" + channel.Index.ToString("D2");
-                    if (instanz.VariableExists(varName))
-                    {
-                        AXVariable aktAXVar = instanz.Get(varName);
-                        if (aktAXVar != null)
-                        {
-                            _varConverter.SetAXVariable(aktAXVar, variable);
-                            setDeviceStatusInMaininstance(variable, deviceID);
-                            Logging.WriteLog(LogLevel.Debug, aktAXVar.Path, "[HomeGear -> aX]: " + aktAXVar.Path + " = " + variable.ToString());
-                        }
-                        SetLastChange(instanz, varName + " = " + variable.ToString());
-                    }
-                    else if (instanz.SubinstanceExists(subinstance))
-                    {
-                        AXVariable aktAXVar2 = instanz.GetSubinstance(subinstance).Get(variable.Name);
-                        if (aktAXVar2 != null)
-                        {
-                            _varConverter.SetAXVariable(aktAXVar2, variable);
-                            setDeviceStatusInMaininstance(variable, deviceID);
-                            Logging.WriteLog(LogLevel.Debug, aktAXVar2.Path, "[HomeGear -> aX]: " + aktAXVar2.Path + " = " + variable.ToString());
-                        }
-                        SetLastChange(instanz, subinstance + "." + variable.Name + " = " + variable.ToString());
-                    }
-                    else
-                        SetLastChange(instanz, varName + " = " + variable.ToString() + " - Variable nicht vorhanden!");
-                    
-                    //Console.WriteLine(device.SerialNumber + ": " + variable.Name + ": " + variable.ToString());
-                }
+                    Int32 deviceID = device.ID;
+                    String varName = variable.Name + "_V" + channel.Index.ToString("D2");
+                    Logging.WriteLog(LogLevel.Debug, "", "RPC: " + deviceID.ToString() + " " + variable.Name + " = " + variable.ToString());
 
-                // Variable in _mainInstnace aktualisieren
-                if (deviceID == _deviceVars_DeviceID)
-                {
-                    for(UInt16 x = 0; x < _deviceVars_Name.Length; x++)
+                    if (variable.Name == "CURRENT_TRACK_METADATA")  //Sonos zerschiesst sonst das aX-Log
+                        return;
+
+                    if (_instances.ContainsKey(deviceID))
                     {
-                        if (_deviceVars_Name.GetString(x) == varName)
+                        AXInstance instanz = _instances[deviceID];
+                        String subinstance = "V" + channel.Index.ToString("D2");
+                        if (instanz.VariableExists(varName))
                         {
-                            _deviceVars_Actual.Set(x, variable.ToString());
-                            break;
+                            AXVariable aktAXVar = instanz.Get(varName);
+                            if (aktAXVar != null)
+                            {
+                                _varConverter.SetAXVariable(aktAXVar, variable);
+                                setDeviceStatusInMaininstance(variable, deviceID);
+                                Logging.WriteLog(LogLevel.Debug, aktAXVar.Path, "[HomeGear -> aX]: " + aktAXVar.Path + " = " + variable.ToString());
+                            }
+                            SetLastChange(instanz, varName + " = " + variable.ToString());
+                        }
+                        else if (instanz.SubinstanceExists(subinstance))
+                        {
+                            AXVariable aktAXVar2 = instanz.GetSubinstance(subinstance).Get(variable.Name);
+                            if (aktAXVar2 != null)
+                            {
+                                _varConverter.SetAXVariable(aktAXVar2, variable);
+                                setDeviceStatusInMaininstance(variable, deviceID);
+                                Logging.WriteLog(LogLevel.Debug, aktAXVar2.Path, "[HomeGear -> aX]: " + aktAXVar2.Path + " = " + variable.ToString());
+                            }
+                            SetLastChange(instanz, subinstance + "." + variable.Name + " = " + variable.ToString());
+                        }
+                        else
+                            SetLastChange(instanz, varName + " = " + variable.ToString() + " - Variable nicht vorhanden!");
+
+                        //Console.WriteLine(device.SerialNumber + ": " + variable.Name + ": " + variable.ToString());
+                    }
+
+                    // Variable in _mainInstnace aktualisieren
+                    if (deviceID == _deviceVars_DeviceID)
+                    {
+                        for (UInt16 x = 0; x < _deviceVars_Name.Length; x++)
+                        {
+                            if (_deviceVars_Name.GetString(x) == varName)
+                            {
+                                _deviceVars_Actual.Set(x, variable.ToString());
+                                break;
+                            }
                         }
                     }
                 }
+                catch (Exception ex)
+                {
+                    Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
+                }
             }
-            catch (Exception ex)
-            {
-                Logging.WriteLog(LogLevel.Error, "", ex.Message, ex.StackTrace);
-            }
-            _instances.MutexLocked = false;
         }
 
         void SetLastChange(AXInstance instanz, String text)
