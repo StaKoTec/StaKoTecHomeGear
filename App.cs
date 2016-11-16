@@ -1771,6 +1771,7 @@ namespace StaKoTecHomeGear
                     sslServerInfo = new SSLServerInfo(sslCertificatePath, sslCertificatePassword, sslaXUsername, sslaXPassword);
                 }
                 _rpc = new RPCController(homegearHostName, homegearPort, aXHostName, aXHostListenIP, listenPort, sslClientInfo, sslServerInfo);
+                _rpc.AsciiDeviceTypeIdString = true;
                 _rpc.ClientConnected += _rpc_ClientConnected;
                 _rpc.ClientDisconnected += _rpc_ClientDisconnected;
                 _rpc.ServerConnected += _rpc_ServerConnected;
