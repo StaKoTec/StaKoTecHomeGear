@@ -9,7 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>StaKoTecHomeGear</RootNamespace>
     <AssemblyName>StaKoTecHomeGear</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
@@ -65,8 +65,8 @@
     <Reference Include="AutomationX">
       <HintPath>libs\AutomationX.dll</HintPath>
     </Reference>
-    <Reference Include="HomegearLib.NET">
-      <HintPath>libs\HomegearLib.NET.dll</HintPath>
+    <Reference Include="HomegearLib.NET, Version=0.1.16.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\HomegearLib.NET.0.1.16\lib\netstandard2.0\HomegearLib.NET.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -75,6 +75,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="netstandard" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App.cs" />
@@ -86,6 +87,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5">

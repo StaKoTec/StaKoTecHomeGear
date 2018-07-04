@@ -10,11 +10,11 @@ namespace StaKoTecHomeGear
 {
     static class Logging
     {
-        private static AX _aX = null;
-        private static AXInstance _mainInstance = null;
+        private static Ax _aX = null;
+        private static AxInstance _mainInstance = null;
         private static System.IO.StreamWriter _logWriter = null;
 
-        public static void Init(AX ax, AXInstance mainInstance)
+        public static void Init(Ax ax, AxInstance mainInstance)
         {
             _aX = ax;
             _mainInstance = mainInstance;
@@ -24,30 +24,64 @@ namespace StaKoTecHomeGear
             _logWriter.AutoFlush = true;
         }
 
-        public static void WriteLog(LogLevel logLevel, String instanceName, String message, String stackTrace = "", Boolean setError = false)
+        public static void WriteLog(LogLevel logLevel, AxInstance instance, String message, String stackTrace = "")
         {
             try
             {
                 if ((logLevel > (LogLevel)_mainInstance.Get("LogLevel").GetLongInteger()) && !(logLevel == LogLevel.Always))
                     return;
 
-                if (instanceName == "")
-                    instanceName = _mainInstance.Name;
-
-                _logWriter.WriteLine(DateTime.Now.ToString() + "." + DateTime.Now.Millisecond.ToString("D3") + ": (" + instanceName + ") " + message);
-
-                _aX.WriteJournal(0, instanceName, message, "ON", _mainInstance.Name);
-                Console.WriteLine(message);
+                String prefix = "";
+                Int32 position = 0;
+                switch (logLevel)
+                {
+                    case LogLevel.Always:
+                        prefix = "";
+                        position = 10;
+                        break;
+                    case LogLevel.Debug:
+                        prefix = "Debug: ";
+                        position = 1;
+                        break;
+                    case LogLevel.Error:
+                        prefix = "Error: ";
+                        position = 0;
+                        break;
+                    case LogLevel.Info:
+                        prefix = "Info: ";
+                        position = 20;
+                        break;
+                    case LogLevel.Warning:
+                        prefix = "Warning: ";
+                        position = 2;
+                        break;
+                    default:
+                        prefix = "";
+                        position = 0;
+                        break;
+                }
+                _logWriter.WriteLine(DateTime.Now.ToString() + "." + DateTime.Now.Millisecond.ToString("D3") + ": (" + instance.Name + ") " + prefix + message);
+                _aX.WriteJournal(position, instance.Name, prefix + message, "ON", _mainInstance.Name);
+                Console.WriteLine(prefix + message);
                 if (stackTrace.Length > 0)
                 {
-                    _aX.WriteJournal(0, instanceName, stackTrace, "ON", _mainInstance.Name);
+                    _aX.WriteJournal(position, instance.Name, stackTrace, "ON", _mainInstance.Name);
                     Console.WriteLine(stackTrace);
                     _logWriter.WriteLine(DateTime.Now.ToString() + "." + DateTime.Now.Millisecond.ToString("D3") + ": " + stackTrace);
                 }
-                if (setError)
-                    _mainInstance.Error = message;
-
-                _mainInstance.Status = message;
+                if (logLevel == LogLevel.Error)
+                {
+                    if (instance.VariableExists("err"))
+                    {
+                        _mainInstance["err.TEXT"].Set(message);
+                        _mainInstance["err"].Set(true);
+                    }
+                }
+                else
+                {
+                    if (instance.VariableExists("Status"))
+                        _mainInstance["Status"].Set(message);
+                }
             }
             catch (Exception ex)
             {

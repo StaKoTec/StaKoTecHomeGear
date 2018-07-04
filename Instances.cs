@@ -8,15 +8,15 @@ using System.Threading;
 
 namespace StaKoTecHomeGear
 {
-    public class Instances : Dictionary<Int32, AXInstance>
+    public class Instances : Dictionary<Int32, AxInstance>
     {
-        public delegate void VariableValueChangedEventHandler(AXVariable variable);
+        public delegate void VariableValueChangedEventHandler(AxVariable variable);
 
         public event VariableValueChangedEventHandler VariableValueChanged;
         public event VariableValueChangedEventHandler SubinstanceVariableValueChanged;
 
-        protected AX _aX = null;
-        protected AXInstance _mainInstance = null;
+        protected Ax _aX = null;
+        protected AxInstance _mainInstance = null;
 
         public Mutex _mutex = new Mutex();
         public Boolean mutexIsLocked = false;
@@ -24,7 +24,7 @@ namespace StaKoTecHomeGear
         protected Int32 _polledVariablesCount = 0;
         public Int32 PolledVariablesCount { get { return _polledVariablesCount; } }
 
-        public Instances(AX ax, AXInstance mainInstance) 
+        public Instances(Ax ax, AxInstance mainInstance) 
         {
             _aX = ax;
             _mainInstance = mainInstance;
@@ -37,15 +37,15 @@ namespace StaKoTecHomeGear
                 mutexIsLocked = true;
                 if (Count > 0)
                 {
-                    foreach (KeyValuePair<Int32, AXInstance> instance in this)
+                    foreach (KeyValuePair<Int32, AxInstance> instance in this)
                     {
                         try
                         {
-                            instance.Value.Get("Lifetick").Set(true);
+                            instance.Value["Lifetick"].Set(true);
                         }
                         catch (Exception ex)
                         {
-                            Logging.WriteLog(LogLevel.Error, "Couldn't set variable " + instance.Value.Name + " to true", ex.StackTrace);
+                            Logging.WriteLog(LogLevel.Error, instance.Value, "Couldn't set variable " + instance.Value.Name + " to true", ex.StackTrace);
                         }
                     }
                 }
@@ -60,154 +60,105 @@ namespace StaKoTecHomeGear
                 mutexIsLocked = true;
                 try
                 {
-                    Logging.WriteLog(LogLevel.Debug, "", "Lösche instanzen-handles");
-                    Clear(false);
-
-                    //////////////////////////////////////////////////////////////
-                    // Alle Instanzen im aX nach ihrer ID abfragen und in Homegear.Devices suchen
-                    Logging.WriteLog(LogLevel.Debug, "", "Hole alle HomeGear-Klassen");
+                    Logging.WriteLog(LogLevel.Debug, _mainInstance, "Hole alle HomeGear-Klassen");
                     List<String> homegearClasses = getHomeGearClasses();
                     Dictionary<String, List<String>> homegearInstances = getHomeGearInstances(homegearClasses);
-                    List<AXInstance> instancesToDispose = new List<AXInstance>();
-                    Logging.WriteLog(LogLevel.Debug, "", "Ab geht die Party");
+                    Logging.WriteLog(LogLevel.Debug, _mainInstance, "Ab geht die Party");
                     _polledVariablesCount = 0;
 
+                    ////////////////////////////////////////////////////
+                    // NEU:
+
+                    List<KeyValuePair<Int32, AxInstance>> instancesToRemove = new List<KeyValuePair<Int32, AxInstance>>();
+                    List<KeyValuePair<Int32, AxInstance>> instancesToReload = new List<KeyValuePair<Int32, AxInstance>>();
+                    foreach (KeyValuePair<Int32, AxInstance> pair in this)
+                    {
+                        if (pair.Value.CleanUp) instancesToRemove.Add(pair);
+                        else if (pair.Value.ReloadRequired) instancesToReload.Add(pair);
+                    }
+                    foreach (KeyValuePair<Int32, AxInstance> instance in instancesToRemove)
+                    {
+                        instance.Value.Dispose();
+                        this.Remove(instance.Key);
+                    }
+                    foreach (KeyValuePair<Int32, AxInstance> instance in instancesToReload)
+                    {
+                        instance.Value.Dispose();
+                        this.Remove(instance.Key);
+                        AxInstance newInstance = new AxInstance(_aX, instance.Value.Name);
+                        this.Add(instance.Key, newInstance);
+                        newInstance.VariableValueChanged += OnVariableValueChanged;
+                        //newInstance.ArrayValueChanged += variable_OnArrayValueChanged;
+
+                        AxVariable[] variables = newInstance.Variables;
+                        foreach (AxVariable variable in variables)
+                            variable.Events = true;
+
+                        AxInstance[] subinstances = newInstance.Subinstances;
+                        foreach (AxInstance subinstance in subinstances)
+                        {
+                            subinstance.VariableValueChanged += OnSubinstanceVariableValueChanged;
+                            //subinstance.ArrayValueChanged += OnArrayValueChanged;
+                            //this.Add(subinstance.Path, subinstance);
+                            variables = subinstance.Variables;
+                            foreach (AxVariable variable in variables)
+                                variable.Events = true;
+                        }
+                    }
+
+
+
+
+                    ///////////////////////////////////////////////////////////////
+                    //////////////////////////////////////////////////////////////
+                    // Alle Instanzen im aX nach ihrer ID abfragen und in Homegear.Devices suchen
+                    //Alt:
                     foreach (KeyValuePair<String, List<String>> aktInstancePair in homegearInstances)
                     {
                         foreach (String aktaXInstanceName in aktInstancePair.Value)
                         {
-                            AXInstance testInstance = new AXInstance(_aX, aktaXInstanceName, "Status", "err");
+                            AxInstance testInstance = new AxInstance(_aX, aktaXInstanceName);
                             Int32 aktID = testInstance.Get("ID").GetLongInteger();
                             if ((aktID <= 0) || (!homegearDevices.ContainsKey(aktID)))  //Wenn eine Instanz frisch im aX instanziert wurde und keine ID vergeben wurde, ist die ID -1 
                             {
-                                Logging.WriteLog(LogLevel.Debug, "", "Ignoriere Instanz " + testInstance.Name + " mit ID " + aktID.ToString() + ", da nicht in homegearDevices.");
+                                Logging.WriteLog(LogLevel.Debug, _mainInstance, "Ignoriere Instanz " + testInstance.Name + " mit ID " + aktID.ToString() + ", da nicht in homegearDevices.");
                                 testInstance.Dispose();
                                 continue;
                             }
-                            Logging.WriteLog(LogLevel.Debug, "", "Füge Instanz (" + aktaXInstanceName + ") " + testInstance.Name + " mit ID " + aktID.ToString() + " hinzu.");
+                            Logging.WriteLog(LogLevel.Debug, _mainInstance, "Füge Instanz (" + aktaXInstanceName + ") " + testInstance.Name + " mit ID " + aktID.ToString() + " hinzu.");
                             Add(aktID, testInstance);
-
-                            if (aktInstancePair.Key != homegearDevices[aktID].TypeString)
-                            {
-                                testInstance.Dispose();
-                                continue;
-                            }
-
-                            testInstance.SetVariableEvents(true);
-                            testInstance.PollingInterval = 20;
-                            testInstance.VariableValueChanged += OnVariableValueChanged;
-                            _polledVariablesCount += testInstance.PolledVariablesCount;
-
-                            ////////////////////////////////////////////////////////////////////
-                            // Subinstanzen suchen und Ereignishandler hinzufügen
-                            foreach (AXInstance aktSubinstance in testInstance.Subinstances)
-                            {
-                                aktSubinstance.SetVariableEvents(true);
-                                aktSubinstance.PollingInterval = 20;
-                                aktSubinstance.VariableValueChanged += OnSubinstanceVariableValueChanged;
-                                _polledVariablesCount += aktSubinstance.PolledVariablesCount;
-                            }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                    Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
                 }
                 mutexIsLocked = false;
             }
         }
 
-        public new void Clear()
-        {
-            throw new NotImplementedException("You need to pass the parameter \"lockMutex\".");
-        }
 
-        public void Clear(bool lockMutex)
-        {
-            lock (_mutex)
-            {
-                mutexIsLocked = true;
-                try
-                {
-                    foreach (KeyValuePair<Int32, AXInstance> instancePair in this)
-                    {
-                        try
-                        {
-                            instancePair.Value.VariableValueChanged -= OnVariableValueChanged;
-                            foreach (AXInstance aktSubinstance in instancePair.Value.Subinstances)
-                            {
-                                aktSubinstance.VariableValueChanged -= OnSubinstanceVariableValueChanged;
-                            }
-                            instancePair.Value.Dispose();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
-                        }
-                        _mainInstance.Get("Lifetick").Set(true);
-                    }
-                    _polledVariablesCount = 0;
-                    base.Clear();
-                }
-                catch (Exception ex)
-                {
-                    Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
-                }
-                mutexIsLocked = false;
-            }
-        }
-
-        public new bool Remove(Int32 key)
-        {
-            throw new NotImplementedException("You need to pass the parameter \"lockMutex\".");
-        }
-
-        public void Remove(Int32 key, bool lockMutex)
-        {
-            lock (_mutex)
-            {
-                mutexIsLocked = true;
-                try
-                {
-                    if (ContainsKey(key))
-                    {
-                        AXInstance removeInstance = this[key];
-                        base.Remove(key);
-                        removeInstance.VariableValueChanged -= OnVariableValueChanged;
-                        foreach (AXInstance aktSubinstance in removeInstance.Subinstances)
-                        {
-                            aktSubinstance.VariableValueChanged -= OnSubinstanceVariableValueChanged;
-                        }
-                        removeInstance.Dispose();
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
-                }
-                mutexIsLocked = false;
-            }
-        }
-
-        private void OnVariableValueChanged(AXVariable sender)
+        private void OnVariableValueChanged(AxVariable sender, AxVariableValue value, DateTime timestamp)
         {
             if (VariableValueChanged != null)
                 VariableValueChanged(sender);
         }
 
-        private void OnSubinstanceVariableValueChanged(AXVariable sender)
+        private void OnSubinstanceVariableValueChanged(AxVariable sender, AxVariableValue value, DateTime timestamp)
         {
             if (SubinstanceVariableValueChanged != null)
                 SubinstanceVariableValueChanged(sender);
         }
+
+
 
         protected List<String> getHomeGearClasses()
         {
             List<String> homeGearClassNames = new List<String>();
             try
             {
-                AXVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
+                AxVariable homeGearKlassen = _mainInstance.Get("HomeGearKlassen");
                 List<String> classNames = _aX.GetClassNames();
 
                 foreach (String name in classNames)
@@ -242,7 +193,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
 
             return homeGearClassNames;
@@ -257,16 +208,16 @@ namespace StaKoTecHomeGear
                 foreach (String aktHomegearClass in homegearClasses)
                 {
                     List<String> aXInstanceNames = _aX.GetInstanceNames(aktHomegearClass);
-                    Logging.WriteLog(LogLevel.Debug, "", "Istanzen von Klasse " + aktHomegearClass + ":");
+                    Logging.WriteLog(LogLevel.Debug, _mainInstance, "Istanzen von Klasse " + aktHomegearClass + ":");
                     foreach(String name in aXInstanceNames)
-                        Logging.WriteLog(LogLevel.Debug, "", name);
+                        Logging.WriteLog(LogLevel.Debug, _mainInstance, name);
                     if (!homegearInstances.ContainsKey(aktHomegearClass))
                         homegearInstances.Add(aktHomegearClass, aXInstanceNames);
                 }
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
             return (homegearInstances);
         }

@@ -10,10 +10,10 @@ namespace StaKoTecHomeGear
 {
     class VariableConverter
     {
-        private AXInstance _mainInstance = null;
+        private AxInstance _mainInstance = null;
 
 
-        public VariableConverter(AXInstance mainInstance)
+        public VariableConverter(AxInstance mainInstance)
         {
             _mainInstance = mainInstance;
         }
@@ -81,7 +81,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
         }
 
@@ -147,12 +147,12 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
         }
 
 
-        public Boolean ParseAXVariable(AXVariable var, out String name, out String type, out Int32 channel)
+        public Boolean ParseAxVariable(AxVariable var, out String name, out String type, out Int32 channel)
         {
             name = "";
             channel = -1;
@@ -169,12 +169,12 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
             return true;
         }
 
-        public void SetHomeGearVariable(Variable homegearVar, AXVariable aXVar)
+        public void SetHomeGearVariable(Variable homegearVar, AxVariable aXVar)
         {
             try
             {
@@ -183,75 +183,73 @@ namespace StaKoTecHomeGear
 
                 switch (aXVar.Type)
                 {
-                    case AXVariableType.axBool:
+                    case AxVariableType.axBool:
                         if ((homegearVar.Type == VariableType.tAction) && !aXVar.GetBool()) return;
                         homegearVar.BooleanValue = aXVar.GetBool();
                         break;
-                    case AXVariableType.axInteger:
+                    case AxVariableType.axInteger:
                         homegearVar.IntegerValue = aXVar.GetInteger();
                         break;
-                    case AXVariableType.axLongInteger:
+                    case AxVariableType.axLongInteger:
                         homegearVar.IntegerValue = aXVar.GetLongInteger();
                         break;
-                    case AXVariableType.axLongReal:
+                    case AxVariableType.axLongReal:
                         homegearVar.DoubleValue = aXVar.GetLongReal();
                         break;
-                    case AXVariableType.axString:
+                    case AxVariableType.axString:
                         homegearVar.StringValue = aXVar.GetString();
                         break;
                 }
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
 
         }
 
-        public String AutomationXVarToString(AXVariable Var)
+        public String AutomationXVarToString(AxVariable Var)
         {
             String stringVar = "AUTOMATIONX VAR-TYPE NOT FOUND";
             try
             {
                 switch (Var.Type)
                 {
-                    case AXVariableType.axBool:
+                    case AxVariableType.axBool:
                         stringVar = Var.GetBool().ToString();
                         break;
-                    case AXVariableType.axByte:
+                    case AxVariableType.axByte:
                         stringVar = Var.GetByte().ToString();
                         break;
-                    case AXVariableType.axInteger:
+                    case AxVariableType.axInteger:
                         stringVar = Var.GetInteger().ToString();
                         break;
-                    case AXVariableType.axLongInteger:
+                    case AxVariableType.axLongInteger:
                         stringVar = Var.GetLongInteger().ToString();
                         break;
-                    case AXVariableType.axUnsignedInteger:
+                    case AxVariableType.axUnsignedInteger:
                         stringVar = Var.GetUnsignedInteger().ToString();
                         break;
-                    case AXVariableType.axUnsignedLongInteger:
+                    case AxVariableType.axUnsignedLongInteger:
                         stringVar = Var.GetUnsignedLongInteger().ToString();
                         break;
-                    case AXVariableType.axReal:
+                    case AxVariableType.axReal:
                         stringVar = Var.GetReal().ToString();
                         break;
-                    case AXVariableType.axLongReal:
+                    case AxVariableType.axLongReal:
                         stringVar = Var.GetLongReal().ToString();
                         break;
-                    case AXVariableType.axShortInteger:
+                    case AxVariableType.axShortInteger:
                         stringVar = Var.GetShortInteger().ToString();
                         break;
-                    case AXVariableType.axString:
+                    case AxVariableType.axString:
                         stringVar = Var.GetString();
                         break;
                 }
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
             return stringVar;
         }
@@ -281,14 +279,13 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
             return stringVar;
         }
 
 
-        public void SetAXVariable(AXVariable aXVar, Variable homegearVar)
+        public void SetAxVariable(AxVariable aXVar, Variable homegearVar)
         {
             try
             {
@@ -316,8 +313,7 @@ namespace StaKoTecHomeGear
             }
             catch (Exception ex)
             {
-                _mainInstance.Error = ex.Message;
-                Logging.WriteLog(LogLevel.Error, ex.Message, ex.StackTrace);
+                Logging.WriteLog(LogLevel.Error, _mainInstance, ex.Message, ex.StackTrace);
             }
         }
     }

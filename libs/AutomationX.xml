@@ -1,0 +1,418 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        "AutomationX"
+    </assembly>
+    <members>
+        <member name="M:AutomationX.AxInstance.WaitForInitCompleted">
+            <summary>Waits for init to complete if "waitForInitComplete" is set to "false" in constructor. This method only needs to be called on the last initialized instance of the thread.</summary>
+        </member>
+        <member name="M:AutomationX.AxInstance.SubinstanceExists(System.String)">
+            <summary>Checks if a subinstance exists.</summary>
+            <returns>True when the subinstance name was found, otherwise false.</returns>
+        </member>
+        <member name="M:AutomationX.AxInstance.VariableExists(System.String)">
+            <summary>Checks if a variable exists.</summary>
+            <returns>True when the variable name was found, otherwise false.</returns>
+        </member>
+        <member name="M:AutomationX.AxInstance.GetSubinstance(System.String)">
+            <summary>Returns the subinstance of the specified name.</summary>
+            <param name="instanceName">The name of the subinstance.</param>
+            <return>Returns an instance object or null, when the subinstance was not found.</return>
+        </member>
+        <member name="M:AutomationX.AxInstance.Get(System.String)">
+            <summary>Returns the aX variable of the specified name.</summary>
+            <param name="variableName">The name of the variable.</param>
+            <return>Returns an aX variable object or null, when the variable was not found.</return>
+        </member>
+        <member name="M:AutomationX.AxInstance.#ctor(AutomationX.Ax,AutomationX.AxInstance,System.String,System.Boolean)">
+            <summary>Constructor</summary>
+            <param name="ax">The aX object.</param>
+            <param name="name">Name of this aX subinstance.</param>
+            <param name="waitForInitCompleted">Default is "true". When set to "false" the constructor returns immediately after all init methods are queued. Call "WaitForInitCompleted()" on the last constructed instance before using the object.</param>
+        </member>
+        <member name="M:AutomationX.AxInstance.#ctor(AutomationX.Ax,System.String,System.Boolean)">
+            <summary>Constructor</summary>
+            <param name="ax">The aX object.</param>
+            <param name="name">Name of this aX instance.</param>
+            <param name="waitForInitCompleted">Default is "true". When set to "false" the constructor returns immediately after all init methods are queued. Call "WaitForInitCompleted()" on the last constructed instance before using the object.</param>
+        </member>
+        <member name="M:AutomationX.AxInstance.#ctor(AutomationX.Ax,AutomationX.AxInstance,System.String)">
+            <summary>Constructor</summary>
+            <param name="ax">The aX object.</param>
+            <param name="name">Name of this aX subinstance.</param>
+        </member>
+        <member name="M:AutomationX.AxInstance.#ctor(AutomationX.Ax,System.String)">
+            <summary>Constructor</summary>
+            <param name="ax">The aX object.</param>
+            <param name="name">Name of this aX instance.</param>
+        </member>
+        <member name="P:AutomationX.AxInstance.default(System.String)">
+            <summary>Returns the aX variable of the specified name.</summary>
+            <param name="variableName">The name of the variable.</param>
+            <return>Returns an aX variable object or null, when the variable was not found.</return>
+        </member>
+        <member name="P:AutomationX.AxInstance.Subinstances">
+            <summary>Returns a collection of all subinstances.</summary>
+        </member>
+        <member name="P:AutomationX.AxInstance.Variables">
+            <summary>Returns a collection of all variables.</summary>
+        </member>
+        <member name="P:AutomationX.AxInstance.Parent">
+            <summary>Returns the parent instance.</summary>
+        </member>
+        <member name="P:AutomationX.AxInstance.CleanUp">
+            <summary>Returns true if the instance does not exist anymore.</summary>
+        </member>
+        <member name="P:AutomationX.AxInstance.ReloadRequired">
+            <summary>Returns true if the instance needs to be recreated.</summary>
+        </member>
+        <member name="E:AutomationX.AxInstance.ArrayValueChanged">
+            <summary>Fired when the value of an array element is changed in aX. Only raised, after "VariableEvents" has been enabled or after manually calling "Refresh".</summary>
+        </member>
+        <member name="E:AutomationX.AxInstance.VariableValueChanged">
+            <summary>Fired when the value of one the instance's a variable is changed in aX. Only raised, after "VariableEvents" has been enabled or after manually calling "Refresh".</summary>
+        </member>
+        <member name="M:AutomationX.AxInstance.GetRawHandle">
+            <summary>Gets a raw aX handle. Only call this method if within the main loop!!!</summary>
+        </member>
+        <member name="M:AutomationX.Ax.#ctor(System.UInt32)">
+            <summary>Constructor</summary>
+            <param name="eventThreadCount">The number of event threads to start.</param>
+        </member>
+        <member name="P:AutomationX.Ax.SpsId">
+            <summary>Returns the current SPS ID.</summary>
+            <returns>The current SPS ID.</returns>
+        </member>
+        <member name="P:AutomationX.Ax.Connected">
+            <summary>Checks if aX is running and if the local computer is running as the master of a redundant master slave server configuration.</summary>
+            <returns>true when aX is running, otherwise false.</returns>
+        </member>
+        <member name="E:AutomationX.Ax.SpsIdChangedAfter">
+            <summary>Fired when the SPS ID was changed after all instances and variables have been reloaded and checked for existance.</summary>
+        </member>
+        <member name="E:AutomationX.Ax.SpsIdChangedBefore">
+            <summary>Fired when the SPS ID was changed before any action is taken. Be very careful doing anything within the event handler. Don't interact with any aX objects as this might cause a deadlock!!!</summary>
+        </member>
+        <member name="E:AutomationX.Ax.ShuttingDown">
+            <summary>Fired when aX is shutting down.</summary>
+        </member>
+        <member name="E:AutomationX.Ax.OnError">
+            <summary>Fired when errors occur.</summary>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetEnumText(System.Int32)">
+            <summary>Gets the description text for an enumeration value.</summary>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.String)">
+            <summary>Sets the value of an array element of type STRING.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type STRING.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.String)">
+            <summary>Sets the value of a variable of type STRING.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type STRING.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetString(System.UInt16)">
+            <summary>Gets the value of an array element of type STRING.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type STRING.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetString">
+            <summary>Gets the value of a variable of type STRING.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type STRING.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.Double)">
+            <summary>Sets the value of an array element of type LREAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type LREAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.Double)">
+            <summary>Sets the value of a variable of type LREAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type LREAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetLongReal(System.UInt16)">
+            <summary>Gets the value of an array element of type LREAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type LREAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetLongReal">
+            <summary>Gets the value of a variable of type LREAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type LREAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.Single)">
+            <summary>Sets the value of an array element of type REAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type REAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.Single)">
+            <summary>Sets the value of a variable of type REAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type REAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetReal(System.UInt16)">
+            <summary>Gets the value of an array element of type REAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type REAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetReal">
+            <summary>Gets the value of a variable of type REAL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type REAL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.UInt32)">
+            <summary>Sets the value of an array element of type UDINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UDINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt32)">
+            <summary>Sets the value of a variable of type UDINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UDINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetUnsignedLongInteger(System.UInt16)">
+            <summary>Gets the value of an array element of type UDINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UDINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetUnsignedLongInteger">
+            <summary>Gets the value of a variable of type UDINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UDINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.UInt16)">
+            <summary>Sets the value of an array element of type UINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16)">
+            <summary>Sets the value of a variable of type UINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetUnsignedInteger(System.UInt16)">
+            <summary>Gets the value of an array element of type UINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetUnsignedInteger">
+            <summary>Gets the value of a variable of type UINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type UINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.Int32)">
+            <summary>Sets the value of an array element of type DINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type DINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.Int32)">
+            <summary>Sets the value of a variable of type DINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type DINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetLongInteger(System.UInt16)">
+            <summary>Gets the value of an array element of type DINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type DINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetLongInteger">
+            <summary>Gets the value of a variable of type DINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type DINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.Int16)">
+            <summary>Sets the value of an array element of type INT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type INT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.Int16)">
+            <summary>Sets the value of a variable of type INT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type INT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetInteger(System.UInt16)">
+            <summary>Gets the value of an array element of type INT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type INT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetInteger">
+            <summary>Gets the value of a variable of type INT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type INT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetShortInteger(System.UInt16)">
+            <summary>Gets the value of an array element of type SINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type SINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetShortInteger">
+            <summary>Gets the value of a variable of type SINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type SINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.Byte)">
+            <summary>Sets the value of an array element of type USINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type USINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.Byte)">
+            <summary>Sets the value of a variable of type USINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type USINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetUnsignedShortInteger(System.UInt16)">
+            <summary>Gets the value of an array element of type USINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type USINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetUnsignedShortInteger">
+            <summary>Gets the value of a variable of type USINT.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type USINT.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte)">
+            <summary>Sets the value of an array element of type BYTE.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BYTE.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte)">
+            <summary>Sets the value of a variable of type BYTE.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BYTE.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetByte(System.UInt16)">
+            <summary>Gets the value of an array element of type BYTE.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BYTE.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetByte">
+            <summary>Gets the value of a variable of type BYTE.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BYTE.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.UInt16,System.Boolean)">
+            <summary>Sets the value of an array element of type BOOL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BOOL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.Set(System.Boolean)">
+            <summary>Sets the value of a variable of type BOOL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BOOL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetBool(System.UInt16)">
+            <summary>Gets the value of an array element of type BOOL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BOOL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetBool">
+            <summary>Gets the value of a variable of type BOOL.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+            <exception cref="T:AutomationX.AxVariableTypeException">Thrown when variable is not of type BOOL.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetValue(System.UInt16)">
+            <summary>Gets the value of an array element.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+        </member>
+        <member name="M:AutomationX.AxVariable.GetValue">
+            <summary>Gets the value of a variable.</summary>
+            <exception cref="T:AutomationX.AxVariableException">Thrown on handle errors.</exception>
+        </member>
+        <member name="P:AutomationX.AxVariable.Remote">
+            <summary>Determine if the remote flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Parameter">
+            <summary>Determine if the parameter flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.ConfigurationValue">
+            <summary>Determine if the configuration value flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Local">
+            <summary>Determine if the local flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Private">
+            <summary>Determine if the private flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Constant">
+            <summary>Determine if the constant flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Retentive">
+            <summary>Determine if the retentive flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Trending">
+            <summary>Determine if the trending flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Global">
+            <summary>Determine if the variable is a global variable.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.NotConnected">
+            <summary>Determine if the not connected flag is set.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Io">
+            <summary>Determine if the variable is an IO variable.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Dimension">
+            <summary>Gets the dimension of a variable.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.DecimalPoints">
+            <summary>Gets the number of decimal places of a variable of type REAL.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Length">
+            <summary>Returns the length of the array.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.IsArray">
+            <summary>Determine if the variable is part of an array.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Remark">
+            <summary>Returns or sets the remark of the variable</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Declaration">
+            <summary>Returns the declaration of the variable (VAR, VAR_INPUT, VAR_OUTPUT, VAR_IN_OUT, VAR_EXTERNAL or VAR_GLOBAL).</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.ReferenceName">
+            <summary>Returns the name of the variable's reference.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Type">
+            <summary>Returns the type of the variable.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Path">
+            <summary>Returns the full path of the variable including all instance names separated by ".".</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Name">
+            <summary>Returns the name of the variable.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Instance">
+            <summary>Returns the instance of the variable.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.Events">
+            <summary>Set to true to enable checking this variable for changes.</summary>
+        </member>
+        <member name="P:AutomationX.AxVariable.CleanUp">
+            <summary>Returns true if the variable does not exist anymore.</summary>
+        </member>
+        <member name="E:AutomationX.AxVariable.ArrayValueChanged">
+            <summary>Fired when the value of an array element is changed in aX. Only raised, after "EnableVariableEvents" has been called on the variable's instance object or after manually calling "Refresh".</summary>
+        </member>
+        <member name="E:AutomationX.AxVariable.ValueChanged">
+            <summary>Fired when the value of the variable is changed in aX. Only raised, after "EnableVariableEvents" has been called on the variable's instance object or after manually calling "Refresh".</summary>
+        </member>
+        <member name="M:AutomationX.AxVariable.#ctor(AutomationX.AxInstance,System.String)">
+            <summary>Concstructor.</summary>
+            <param name="instance">The instance the variable belongs to.</param>
+            <param name="name">The name of the variable.</param>
+            <exception cref="T:AutomationX.AxVariableException">Thrown when variable was not found or on handle errors.</exception>
+        </member>
+        <member name="M:Sps_GetNumberOfClassDefs(System.SByte!System.Runtime.CompilerServices.IsSignUnspecifiedByte**,System.Int32)">
+classNames is an array of pointers allocated from caller
+nSize is classNames size
+returns number of class definitions found.
+        -number if nSize is to small!!!
+</member>
+        <member name="M:SendDataToMaster(System.Void*,System.Void*)">
+#endif	/* !AX_VER_46ML */
+</member>
+    </members>
+</doc>
